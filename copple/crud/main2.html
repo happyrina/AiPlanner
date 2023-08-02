@@ -1,0 +1,214 @@
+<!-- main2.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>일정CRUD</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    form {
+      margin-bottom: 30px;
+    }
+
+    label {
+      display: inline-block;
+      width: 100px;
+      text-align: right;
+      margin-right: 10px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      padding: 5px;
+      margin-bottom: 10px;
+      width: 200px;
+    }
+
+    textarea {
+      height: 100px;
+    }
+
+    input[type="button"] {
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-right: 10px;
+    }
+
+    input[type="button"]:last-child {
+      margin-right: 0;
+    }
+
+    input[type="button"]:hover {
+      background-color: #45a049;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    tr:hover {
+      background-color: #ddd;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>일정</h1>
+  <form id="eventForm">
+    <label for="title">Title:</label>
+    <input type="text" id="title" name="title" required><br><br>
+
+    <label for="year">Year:</label>
+    <input type="number" id="year" name="year" required><br><br>
+
+    <label for="month">Month:</label>
+    <input type="number" id="month" name="month" required><br><br>
+
+    <label for="start_day">Start Day:</label>
+    <input type="number" id="start_day" name="start_day" required><br><br>
+
+    <label for="end_day">End Day:</label>
+    <input type="number" id="end_day" name="end_day" required><br><br>
+
+    <label for="goal">Goal:</label>
+    <input type="text" id="goal" name="goal" required><br><br>
+
+    <label for="place">Place:</label>
+    <input type="text" id="place" name="place" required><br><br>
+
+    <label for="content">Content:</label>
+    <textarea id="content" name="content" required></textarea><br><br>
+
+    <input type="button" value="저장" onclick="submitForm()">
+    <input type="button" value="모든 일정 조회" onclick="viewAllEvents()">
+    <input type="button" value="삭제" onclick="deleteEvent()">
+  </form>
+  <script>
+    //저장
+    function submitForm() {
+      const titleInput = document.getElementById("title");
+      const title = titleInput.value.trim(); // Trim leading and trailing spaces
+
+      if (!title) {
+        alert("Title을 입력하세요.");
+        return;
+      }
+      const formData = new FormData(document.getElementById("eventForm"));
+      const eventObj = {};
+      formData.forEach((value, key) => {
+        eventObj[key] = value;
+      });
+
+      fetch('/event_add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventObj),
+      })
+        .then(response => response.text())
+        .then(alertMessage => {
+          alert(alertMessage);
+          location.reload();
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // 이벤트 조회 함수
+    function get_all_events() {
+      fetch('/get_all_events/')
+        .then(response => response.json()) // JSON 형태로 파싱
+        .then(events => {
+          const table = document.getElementById("eventTable");
+
+          // 이전에 테이블에 있던 데이터 초기화
+          while (table.rows.length > 1) {
+            table.deleteRow(1);
+          }
+
+          // 조회한 이벤트 데이터를 테이블에 추가
+          events.forEach(event => {
+            const row = table.insertRow(-1);
+            row.insertCell().innerHTML = event.title;
+            row.insertCell().innerHTML = event.year;
+            row.insertCell().innerHTML = event.month;
+            row.insertCell().innerHTML = event.start_day;
+            row.insertCell().innerHTML = event.end_day;
+            row.insertCell().innerHTML = event.goal;
+            row.insertCell().innerHTML = event.place;
+            row.insertCell().innerHTML = event.content;
+          });
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // 페이지가 로드되면 자동으로 모든 일정 조회
+    document.addEventListener('DOMContentLoaded', function () {
+      get_all_events();
+    });
+
+    // 이벤트 삭제 함수
+    function deleteEvent() {
+      const title = document.getElementById("title").value;
+
+      if (!title) {
+        alert("Title명을 입력해주세요.");
+        return;
+      }
+
+      fetch(`/delete_event/?title=${title}`, {
+        method: 'DELETE',
+      })
+        .then(response => response.text()) // Parse the response as text
+        .then(alertMessage => {
+          alert(alertMessage); // Show the confirmation message
+          if (alertMessage.includes("정말로")) {
+            // If the confirmation message contains "정말로",
+            // it means the event exists and can be deleted
+            fetch(`/confirm_delete_event/?title=${title}`, {
+              method: 'DELETE',
+            })
+              .then(response => response.text()) // Parse the response as text
+              .then(alertMessage => {
+                alert(alertMessage); // Show the success message
+                getAllEvents(); // Refresh the event list
+              })
+              .catch(error => console.error('Error:', error));
+          }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+  </script>
+</body>
+
+</html>

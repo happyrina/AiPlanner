@@ -1,0 +1,96 @@
+<!-- events.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>일정CRUD</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    tr:hover {
+      background-color: #ddd;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 일정 목록 테이블 -->
+  <h2>일정 목록</h2>
+  <table border="1" id="eventTable">
+    <tr>
+      <th>Title</th>
+      <th>Year</th>
+      <th>Month</th>
+      <th>Start Day</th>
+      <th>End Day</th>
+      <th>Goal</th>
+      <th>Place</th>
+      <th>Content</th>
+    </tr>
+    <!-- 조회한 이벤트 데이터를 여기에 추가할 예정 -->
+  </table>
+
+  <script>
+    // 이벤트 조회 함수
+    function get_all_events() {
+      fetch('/get_all_events/')
+        .then(response => response.json()) // JSON 형태로 파싱
+        .then(events => {
+          const table = document.getElementById("eventTable");
+
+          // 이전에 테이블에 있던 데이터 초기화
+          while (table.rows.length > 1) {
+            table.deleteRow(1);
+          }
+
+          // 조회한 이벤트 데이터를 테이블에 추가
+          events.forEach(event => {
+            const row = table.insertRow(-1);
+            row.insertCell().innerHTML = event.title;
+            row.insertCell().innerHTML = event.year;
+            row.insertCell().innerHTML = event.month;
+            row.insertCell().innerHTML = event.start_day;
+            row.insertCell().innerHTML = event.end_day;
+            row.insertCell().innerHTML = event.goal;
+            row.insertCell().innerHTML = event.place;
+            row.insertCell().innerHTML = event.content;
+          });
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // 페이지가 로드되면 자동으로 모든 일정 조회
+    document.addEventListener('DOMContentLoaded', function () {
+      get_all_events();
+    });
+  </script>
+</body>
+
+</html>
