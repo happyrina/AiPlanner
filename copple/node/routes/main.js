@@ -1,20 +1,20 @@
-const express = require('express');
-const { v4: uuidv4 } = require('uuid'); // uuid 모듈을 불러오기
-const jwt = require('jsonwebtoken'); // jsonwebtoken 모듈을 불러오기
-const AWS = require('aws-sdk'); // AWS SDK 불러오기
-const cookieParser = require('cookie-parser');
-const path = require('path'); // cookie-parser 미들웨어 사용
+const express = require('express'); // express 모듈 가져오기
+const { v4: uuidv4 } = require('uuid'); // uuid 모듈 가져오기 (고유 식별자 생성)
+const jwt = require('jsonwebtoken'); // jsonwebtoken 모듈 가져오기 (JWT 토큰 사용)
+const AWS = require('aws-sdk'); // AWS SDK 모듈 가져오기
+const cookieParser = require('cookie-parser'); // cookie-parser 모듈 가져오기
+const path = require('path'); // path 모듈 가져오기 (파일 경로 조작)
 
-const app = express();
+const app = express(); // Express 애플리케이션 생성
 
-// 쿠키 파서 및 기타 미들웨어 설정
-app.use(express.json());
-app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public'))); // 기본값: __dir -> __dirname
+// 쿠키 파서 및 다른 미들웨어 설정
+app.use(express.json()); // JSON 요청 파싱
+app.use(cookieParser()); // 쿠키 파싱
+app.use(express.urlencoded({ extended: true })); // URL 인코딩된 요청 파싱
+app.use(express.static(path.join(__dirname, 'public'))); // 정적 파일 서비스 설정
 
 // AWS DynamoDB 설정
-const dynamodb = new AWS.DynamoDB({ region: 'ap-northeast-2' });
+const dynamodb = new AWS.DynamoDB({ region: 'ap-northeast-2' }); // AWS DynamoDB 인스턴스 생성
 const tableName = 'Account'; // 사용자 정보를 저장할 테이블 이름
 
 // 사용자 ID가 이미 존재하는지 확인하는 함수
@@ -29,7 +29,7 @@ async function isUserExists(userId) {
     const response = await dynamodb.query(params).promise();
     return response.Items.length > 0;
   } catch (error) {
-    console.error('에러 발생:', error);
+    console.error('An error occurred:', error);
     return false;
   }
 }
@@ -49,12 +49,12 @@ async function isValidPassword(userId, userName, password) {
   return item && item.Password.S === password;
 }
 
-// "/login/" POST 엔드포인트 설정
+// POST 엔드포인트 "/login/"
 app.post("/login", async (req, res) => {
   const { user_id, user_name, password } = req.body;
 
   if (!password) {
-    return res.status(400).json({ detail: "응답이 없습니다." });
+    return res.status(400).json({ detail: "응답 없음." });
   }
 
   try {
@@ -65,22 +65,22 @@ app.post("/login", async (req, res) => {
 
       return res.json({ message: "로그인 성공" });
     } else {
-      return res.status(401).json({ detail: "잠금 상태입니다." });
+      return res.status(401).json({ detail: "잠김 상태." });
     }
   } catch (error) {
-    console.error('에러 발생:', error);
+    console.error('An error occurred:', error);
     return res.status(500).json({ detail: "내부 서버 오류" });
   }
 });
 
-// "/logout/" POST 엔드포인트 설정
+// POST 엔드포인트 "/logout/"
 app.post("/logout/", (req, res) => {
   // 사용자 로그아웃 처리: 응답에서 토큰 쿠키 삭제
   res.clearCookie("token");
   return res.json({ message: "로그아웃 성공" });
 });
 
-// "/signup" POST 엔드포인트 설정
+// POST 엔드포인트 "/signup"
 app.post("/signup", async (req, res) => {
   const { user_id, user_name, password, passwordcheck } = req.body;
 
@@ -109,16 +109,15 @@ app.post("/signup", async (req, res) => {
     await dynamodb.putItem(params).promise();
     return res.json({ message: "사용자 등록 완료", user_uuid: user_uuid });
   } catch (error) {
-    console.error('에러 발생:', error);
+    console.error('An error occurred:', error);
     return res.status(500).json({ detail: "내부 서버 오류" });
   }
 });
 
-
-// 디버깅: 토큰이 제대로 수신되었는지 확인
+// 디버깅: 토큰이 올바르게 수신되었는지 확인
 function requireLogin(req, res, next) {
   const token = req.cookies.token;
-  console.log("Token:", token); // 디버깅을 위해 이 줄을 추가합니다.
+  console.log("Token:", token); // 디버깅을 위해 추가
 
   if (!token) {
     return res.status(401).json({ detail: "인증되지 않았습니다 - 로그인이 필요합니다." });
@@ -129,12 +128,12 @@ function requireLogin(req, res, next) {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error("토큰 검증 오류:", error); // 디버깅을 위해 이 줄을 추가합니다.
+    console.error("토큰 유효성 검사 오류:", error); // 디버깅을 위해 추가
     return res.status(401).json({ detail: "인증되지 않았습니다 - 잘못된 토큰입니다." });
   }
 }
 
-// 새로운 POST 엔드포인트 "/create-event" 추가
+// 새로운 POST 엔드포인트 "/create-event"
 app.post("/create-event", requireLogin, async (req, res) => {
   const user = req.user; // JWT 토큰에서 사용자 세부 정보 가져오기
 
@@ -146,36 +145,32 @@ app.post("/create-event", requireLogin, async (req, res) => {
   // Interest 속성을 배열로 변환
   const interestArray = Array.isArray(interest) ? interest : [interest];
 
-  // 데이터베이스에 저장될 아이템 준비
+  // 데이터베이스에 저장할 항목 준비
   const params = {
-    TableName: 'Event', // change to the table name for the event
+    TableName: 'Event', // 이벤트용 테이블 이름으로 변경
     Item: {
       'EventId': { S: event_id },
-      'UserId': { S: user.user_id }, // Store user ID from JWT token
-      'Title': { S: 'Event Title' }, // Add the Title attribute
+      'UserId': { S: user.user_id }, // JWT 토큰에서 사용자 ID 저장
+      'Title': { S: '이벤트 제목' }, // 제목 속성 추가
       'Destination': { S: destination },
       'StartDate': { S: start_date },
       'EndDate': { S: end_date },
       'CompanionType': { S: companion_type },
-      'Interest': { SS: interestArray }, // save as an array
+      'Interest': { SS: interestArray }, // 배열로 저장
     },
   };
-  
 
   try {
     await dynamodb.putItem(params).promise();
     return res.json({ message: "이벤트가 성공적으로 생성되었습니다.", event_id: event_id });
   } catch (error) {
-    console.error('오류가 발생했습니다:', error);
+    console.error('An error occurred:', error);
     return res.status(500).json({ detail: "내부 서버 오류" });
   }
 });
 
 
-
-// Debugging: Check if the main page route is being accessed
 app.get("/mainpage", requireLogin, (req, res) => {
-  console.log("Accessing main page"); // Add this line for debugging
   res.sendFile(path.join(__dirname, '../public/main.html'));
 });
 
@@ -187,6 +182,4 @@ app.get("/signuppage", (req, res) => {
   res.sendFile(path.join(__dirname, '../public/signup.html'));
 });
 
-
-
-module.exports = app;
+module.exports = app; // 애플리케이션 모듈로 내보내기
