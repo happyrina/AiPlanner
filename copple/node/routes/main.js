@@ -144,7 +144,7 @@ app.post("/create-event", requireLogin, async (req, res) => {
 
   // Interest 속성을 배열로 변환
   const interestArray = Array.isArray(interest) ? interest : [interest];
-
+  const destinationArray = Array.isArray(destination) ? destination : [destination];
   // 데이터베이스에 저장할 항목 준비
   const params = {
     TableName: 'Event', // 이벤트용 테이블 이름으로 변경
@@ -152,7 +152,7 @@ app.post("/create-event", requireLogin, async (req, res) => {
       'EventId': { S: event_id },
       'UserId': { S: user.user_id }, // JWT 토큰에서 사용자 ID 저장
       'Title': { S: '이벤트 제목' }, // 제목 속성 추가
-      'Destination': { S: destination },
+      'Destination': { SS: destinationArray }, // 배열로 저장
       'StartDate': { S: start_date },
       'EndDate': { S: end_date },
       'CompanionType': { S: companion_type },
