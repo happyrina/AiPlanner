@@ -7,6 +7,6 @@ kernel.add_text_completion_service(
   "OpenAI_davinci",
   OpenAITextCompletion(
     "text-davinci-003",
-    "OPENAI_API_KEY="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"
+    "OPENAI_API_KEY=""
   )
 )
