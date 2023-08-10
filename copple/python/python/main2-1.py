@@ -1,16 +1,13 @@
 import uvicorn
-import boto3
-import json
-import os
-import logging
-
-from decimal import Decimal
-from fastapi.responses import JSONResponse
-from fastapi import FastAPI, Response, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import boto3
+import json
+import logging
+import uuid
 
 # DynamoDB 연결
 dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-2')
@@ -23,22 +20,9 @@ if table_name not in [table.name for table in dynamodb.tables.all()]:
     # 테이블이 존재하지 않으면 테이블 생성
     table = dynamodb.create_table(
         TableName=table_name,
-        KeySchema=[
-            {
-                'AttributeName': 'title',
-                'KeyType': 'HASH'  # Partition Key로 설정 (단일 속성 키)
-            }
-        ],
-        AttributeDefinitions=[
-            {
-                'AttributeName': 'title',
-                'AttributeType': 'S'  # 'title' 속성의 데이터 타입 (S: 문자열, N: 숫자 등)
-            }
-        ],
-        ProvisionedThroughput={
-            'ReadCapacityUnits': 5,
-            'WriteCapacityUnits': 5
-        }
+        KeySchema=[{'AttributeName': 'title', 'KeyType': 'HASH'}],
+        AttributeDefinitions=[{'AttributeName': 'title', 'AttributeType': 'S'}],
+        ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
     )
     # 테이블이 생성될 때까지 기다립니다.
     table.meta.client.get_waiter('table_exists').wait(TableName=table_name)
@@ -50,7 +34,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="./"), name="static")
 templates = Jinja2Templates(directory="./")
 
-class Item(BaseModel):
+class Event(BaseModel):
     title: str
     year: int
     month: int
@@ -63,66 +47,49 @@ class Item(BaseModel):
 @app.get("/")
 async def home(request: Request):
     return templates.TemplateResponse("main2.html", {"request": request})
- 
 
-@app.post("/event_add", response_model=Item)
-async def create_event(item: Item):
-    # Extract data from the item
-    title = item.title.strip()  # title 앞뒤 공백 제거
+@app.post("/event_add")
+async def create_event(event: Event):
+    # Generate a new UUID
+    event_id = str(uuid.uuid4())
+    # Extract data from the event
+    title = event.title.strip()
 
     # Check if the title is empty
     if not title:
-        alert_message = "제목을 입력하세요."
-        return Response(content=f"<script>alert('{alert_message}');</script>", media_type="text/html")
+        return HTMLResponse(content="<script>alert('제목을 입력하세요.');</script>")
 
     # Check if the event with the same title already exists
     existing_event = table.get_item(Key={'title': title}).get('Item')
     if existing_event:
-        # Event with the same title already exists, show error message
-        alert_message = f"이미 '{title}' 이벤트가 존재합니다. 이름을 수정하세요."
-        return Response(content=f"<script>alert('{alert_message}');</script>", media_type="text/html")
+        return HTMLResponse(content=f"<script>alert('이미 {title} 이벤트가 존재합니다. 이름을 수정하세요.');</script>")
 
-    year = item.year
-    month = item.month
-    start_day = item.start_day
-    end_day = item.end_day
-    goal = item.goal
-    place = item.place
-    content = item.content
-    
     # Save data to DynamoDB table
-    table.put_item(
-        Item={
-            'title': title,
-            'year': year,
-            'month': month,
-            'start_day': start_day,
-            'end_day': end_day,
-            'goal': goal,
-            'place': place,
-            'content': content
-        }
-    )
-    
-    alert_message = "저장되었습니다"
-    return Response(content=f"<script>alert('{alert_message}');</script>", media_type="text/html")
+    table.put_item(Item={
+        'event_id': event_id,
+        'title': title,
+        'year': event.year,
+        'month': event.month,
+        'start_day': event.start_day,
+        'end_day': event.end_day,
+        'goal': event.goal,
+        'place': event.place,
+        'content': event.content
+    })
+
+    return HTMLResponse(content="<script>alert('저장되었습니다');</script>")
 
 @app.get("/get_all_events/")
 async def get_all_events():
     try:
         response = table.scan()
         events = response.get('Items', [])
-
         if not events:
-            return JSONResponse(content={"message": "이벤트가 존재하지 않습니다."})
-
-        # Decimal 값을 float로 변환하여 JSON으로 직렬화
-        events_json = json.dumps(events, default=float)
-        return JSONResponse(content="application/json; charset=utf-8")
+            return {"message": "이벤트가 존재하지 않습니다."}
+        return events
     except Exception as e:
         logging.exception("Error occurred while fetching events.")
-        return JSONResponse(content={"error": "서버에서 이벤트 데이터를 가져오는 중에 오류가 발생했습니다."})
-
+        return {"error": "서버에서 이벤트 데이터를 가져오는 중에 오류가 발생했습니다."}
 
 @app.get("/get_one_event/")
 async def get_one_event(title: str):
@@ -136,25 +103,6 @@ async def get_one_event(title: str):
         return Response(content="<script>alert('이벤트가 존재하지 않습니다.');</script>", media_type="text/html")
 
     return event
-
-@app.delete("/delete_event/")
-async def delete_event(title: str):
-    if not title:
-        # If title is empty, return an error response
-        return Response(content="<script>alert('Title명을 입력해주세요.');</script>", media_type="text/html")
-
-    # Query the DynamoDB table to get the event with the specified title
-    response = table.get_item(Key={'title': title})
-
-    # Extract the event data from the response
-    event = response.get('Item')
-
-    if not event:
-        return Response(content="<script>alert('이벤트가 존재하지 않습니다.');</script>", media_type="text/html")
-
-    # Confirmation message before deletion
-    confirm_message = f"정말로 '{title}' 여행을 삭제하시겠습니까?"
-    return JSONResponse(content={"message": confirm_message})
 
 @app.delete("/confirm_delete_event/")
 async def confirm_delete_event(title: str):

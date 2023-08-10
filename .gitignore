@@ -1,0 +1,13 @@
+#chatbot
+chatbot
+
+#nodejs
+copple/nodejs/node_modules
+copple/nodejs/**/package-lock.json
+copple/nodejs/**/package.json
+
+#trial
+node_modules
+
+#.env
+.env

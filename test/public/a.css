@@ -1,0 +1,68 @@
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.section {
+  position: absolute;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+.schedule-title {
+  font-size: 20px;
+  line-height: 24px;
+  color: black;
+  text-align: left;
+  /*margin-top: 0px;*/
+  margin-left: 30px;
+}
+
+.task-title {
+  font-size: 20px;
+  line-height: 24px;
+  color: #000000;
+  opacity: 0.5;
+  text-align: left;
+  /*margin-top: 0px;*/
+  margin-left: 150px;
+}
+
+.goal-title {
+  font-size: 20px;
+  line-height: 24px;
+  color: #000000;
+  opacity: 0.5;
+  text-align: left;
+  /*margin-top: 0px;*/
+  margin-left: 270px;
+}
+
+.rectangle {
+  box-sizing: border-box;
+  position: absolute;
+  border: 1px solid #9D9D9D;
+  border-radius: 6px;
+}
+
+.blue-rectangle {
+  background: #00A6ED;
+  border-radius: 19px;
+  position: absolute;
+  right: 8px;
+  top: 20px;
+}
+
+.save-button {
+  font-size: 15px;
+  line-height: 18px;
+  color: #FFFFFF;
+  background-color: #00A6ED;
+  border: none;
+  border-radius: 0px;
+  position: absolute;
+  right: 16px;
+  top: 28px;
+}
