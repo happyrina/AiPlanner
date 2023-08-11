@@ -172,48 +172,92 @@ app.post("/signup", async (req, res) => {
 // 새로운 POST 엔드포인트 "/create-event"
 app.post("/create-event", requireLogin, async (req, res) => {
   const user = req.user; // JWT 토큰에서 사용자 세부 정보 가져오기
+  const { title, startYear, startMonth, startDay, endYear, endMonth, endDay, location, content, photoUrl } = req.body;
 
-  const { destination, start_date, end_date, companion_type, interest } = req.body;
-
-  // 고유한 이벤트 ID 생성
+  //고유한 이벤트 Iㅇ 생성
   const event_id = uuidv4();
 
-  // Interest 속성을 배열로 변환
-  const interestArray = Array.isArray(interest) ? interest : [interest];
-  const destinationArray = Array.isArray(destination) ? destination : [destination];
-
-  // 데이터베이스에 저장할 항목 준비
+  //데이터베이스에 저장할 항목 준비
   const params = {
-    TableName: 'Event', // 이벤트용 테이블 이름으로 변경
+    TableName: 'Event',
     Item: {
       'EventId': { S: event_id },
-      'UserId': { S: user.user_id }, // JWT 토큰에서 사용자 ID 저장
-      'Title': { S: '이벤트 제목' }, // 제목 속성 추가
-      'Destination': { SS: destinationArray }, // 배열로 저장
-      'StartDate': { S: start_date },
-      'EndDate': { S: end_date },
-      'CompanionType': { S: companion_type },
-      'Interest': { SS: interestArray }, // 배열로 저장
+      'UserId': { S: user.user_id },
+      'Title': { S: title },
+      'StartDate': { S: `${startYear}-${startMonth}-${startDay}` },
+      'EndDate': { S: `${endYear}-${endMonth}-${endDay}` },
+      'Location': { S: location },
+      'Content': { S: content },
+      'PhotoURL': { S: photoUrl }
     },
   };
-
   try {
     await dynamodb.putItem(params).promise();
+
+    // 생성된 이벤트 데이터를 변수 eventData에 저장
     const eventData = {
       event_id,
-      destination,
-      start_date,
-      end_date,
-      companion_type,
-      interest: interestArray,
+      title,
+      startYear,
+      startMonth,
+      startDay,
+      endYear,
+      endMonth,
+      endDay,
+      location,
+      content,
+      photoUrl
     };
     res.cookie("eventData", JSON.stringify(eventData)); // 생성된 이벤트 데이터를 쿠키에 저장
-    res.sendFile(path.join(__dirname, '../public/chatbot.html')); // chatbot.html로 이동
   } catch (error) {
     console.error('An error occurred:', error);
     return res.status(500).json({ detail: "내부 서버 오류" });
   }
 });
+// app.post("/create-event", requireLogin, async (req, res) => {
+//   const user = req.user; // JWT 토큰에서 사용자 세부 정보 가져오기
+
+//   const { destination, start_date, end_date, companion_type, interest } = req.body;
+
+//   // 고유한 이벤트 ID 생성
+//   const event_id = uuidv4();
+
+//   // Interest 속성을 배열로 변환
+//   const interestArray = Array.isArray(interest) ? interest : [interest];
+//   const destinationArray = Array.isArray(destination) ? destination : [destination];
+
+//   // 데이터베이스에 저장할 항목 준비
+//   const params = {
+//     TableName: 'Event', // 이벤트용 테이블 이름으로 변경
+//     Item: {
+//       'EventId': { S: event_id },
+//       'UserId': { S: user.user_id }, // JWT 토큰에서 사용자 ID 저장
+//       'Title': { S: '이벤트 제목' }, // 제목 속성 추가
+//       'Destination': { SS: destinationArray }, // 배열로 저장
+//       'StartDate': { S: start_date },
+//       'EndDate': { S: end_date },
+//       'CompanionType': { S: companion_type },
+//       'Interest': { SS: interestArray }, // 배열로 저장
+//     },
+//   };
+
+//   try {
+//     await dynamodb.putItem(params).promise();
+//     const eventData = {
+//       event_id,
+//       destination,
+//       start_date,
+//       end_date,
+//       companion_type,
+//       interest: interestArray,
+//     };
+//     res.cookie("eventData", JSON.stringify(eventData)); // 생성된 이벤트 데이터를 쿠키에 저장
+//     res.sendFile(path.join(__dirname, '../public/a.html')); // a.html로 이동
+//   } catch (error) {
+//     console.error('An error occurred:', error);
+//     return res.status(500).json({ detail: "내부 서버 오류" });
+//   }
+// });
 
 // POST 엔드포인트 "/chatbot"
 app.post("/chatbot", requireLogin, async (req, res) => {
@@ -260,8 +304,7 @@ EndDate: ${EndDate}
   }
 });
 
-app.get("/",(req,res)=>
-{
+app.get("/", (req, res) => {
   // 로그인 전적 확인
   const cookies = req.headers.cookie;
   console.log(req.headers)

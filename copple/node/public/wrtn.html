@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>일정 계획</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* 전체 영역 스타일 */
+    body {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+      background-color: #FFFFFF;
+    }
+
+    /* 일정 제목 스타일 */
+    #title {
+      position: absolute;
+      width: 179px;
+      height: 17px;
+      left: 28px;
+      top: 91px;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 18px;
+      color: #000000;
+    }
+
+    /* 일정 기간 스타일 */
+    #date {
+      position: absolute;
+      width: 179px;
+      height: 17px;
+      left: 28px;
+      top: 196px;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 18px;
+      color: #000000;
+    }
+
+    /* 일정 장소 스타일 */
+    #location {
+      position: absolute;
+      width: 179px;
+      height: 17px;
+      left: 28px;
+      top: 294px;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 18px;
+      color: #000000;
+    }
+
+    /* 일정 내용 스타일 */
+    #content {
+      position: absolute;
+      width: 179px;
+      height: 17px;
+      left: 28px;
+      top: 392px;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 18px;
+      color: #000000;
+    }
+
+    /* 일정 분류 스타일 */
+    .category {
+      font-weight: 700;
+      font-size: 20px;
+      line-height: 24px;
+    }
+
+    /* 일정 분류 - 일정 스타일 */
+    #schedule {
+      position: absolute;
+      width: 41px;
+      height: 17px;
+      left: 97px;
+      top: 37px;
+      color: #808080;
+    }
+
+    /* 일정 분류 - 할 일 스타일 */
+    #todo {
+      position: absolute;
+      width: 53px;
+      height: 17px;
+      left: 159px;
+      top: 37px;
+      color: #000000;
+      opacity: 0.5;
+    }
+
+    /* 일정 제목 입력 필드 스타일 */
+    #title-input {
+      position: absolute;
+      width: 339px;
+      height: 49px;
+      left: 28px;
+      top: 119px;
+      box-sizing: border-box;
+      border: 1px solid #9D9D9D;
+      border-radius: 6px;
+    }
+
+    /* 일정 기간 입력 필드 스타일 */
+    #date-input {
+      position: absolute;
+      width: 339px;
+      height: 49px;
+      left: 28px;
+      top: 224px;
+      box-sizing: border-box;
+      border: 1px solid #9D9D9D;
+      border-radius: 6px;
+    }
+
+    /* 일정 장소 입력 필드 스타일 */
+    #location-input {
+      position: absolute;
+      width: 339px;
+      height: 49px;
+      left: 28px;
+      top: 322px;
+      box-sizing: border-box;
+      border: 1px solid #9D9D9D;
+      border-radius: 6px;
+    }
+
+    /* 일정 내용 입력 필드 스타일 */
+    #content-input {
+      position: absolute;
+      width: 339px;
+      height: 170px;
+      left: 28px;
+      top: 420px;
+      box-sizing: border-box;
+      border: 1px solid #9D9D9D;
+      border-radius: 6px;
+      resize: none;
+    }
+
+    /* 일정 이미지 스타일 */
+    #image {
+      position: absolute;
+      width: 124px;
+      height: 91px;
+      left: 29px;
+      top: 645px;
+      background: url(image.png);
+      border-radius: 6px;
+    }
+
+    /* 일정 이미지 선택 버튼 스타일 */
+    #select-button {
+      position: absolute;
+      width: 65px;
+      height: 17px;
+      left: 209px;
+      top: 666px;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 18px;
+      color: #000000;
+    }
+
+    /* 일정 이미지 선택 아이콘 스타일 */
+    #select-icon {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 177px;
+      top: 665px;
+      font-family: 'FluentSystemIcons-Regular';
+      font-weight: 400;
+      font-size: 20px;
+      line-height: 20px;
+      color: #363636;
+    }
+
+    /* 일정 이미지 삭제 버튼 스타일 */
+    #delete-button {
+      position: absolute;
+      width: 44px;
+      height: 17px;
+      left: 215px;
+      top: 705px;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 18px;
+      color: #000000;
+    }
+
+    /* 일정 이미지 삭제 아이콘 스타일 */
+    #delete-icon {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 177px;
+      top: 704px;
+      font-family: 'FluentSystemIcons-Regular';
+      font-weight: 400;
+      font-size: 20px;
+      line-height: 20px;
+      color: #363636;
+    }
+
+    /* 저장 버튼 스타일 */
+    .save-button {
+      position: absolute;
+      width: 29px;
+      height: 19px;
+      left: 324px;
+      top: 44px;
+      background-color: #00A6ED;
+      border-radius: 19px;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 18px;
+      color: #FFFFFF;
+    }
+
+    /* 목표 스타일 */
+    #goal {
+      position: absolute;
+      width: 41px;
+      height: 17px;
+      left: 30px;
+      top: 37px;
+      font-weight: 700;
+      font-size: 20px;
+      line-height: 24px;
+      color: #000000;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="title">일정 제목</div>
+  <div id="title-input" contenteditable></div>
+  <div id="date">일정 기간</div>
+  <div id="date-input" contenteditable></div>
+
+  <div id="location">일정 장소</div>
+  <div id="location-input" contenteditable></div>
+
+  <div id="content">일정 내용</div>
+  <div id="content-input" contenteditable></div>
+
+  <div class="category" id="schedule">일정</div>
+  <div class="category" id="todo">할 일</div>
+
+  <div id="image"></div>
+  <div id="select-button">사진 선택</div>
+  <div id="select-icon">&#xF4C8;</div>
+  <div id="delete-button">지우기</div>
+  <div id="delete-icon">&#xF34C;</div>
+
+  <div class="save-button">저장</div>
+
+  <div id="goal">목표</div>
+</body>
+
+</html>

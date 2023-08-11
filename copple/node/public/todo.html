@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>할 일</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="real.css">
+</head>
+
+<body>
+  <div class="category" id="goal" onclick="navigateTo('goal.html')">목표</div>
+  <div class="category" id="schedule" onclick="navigateTo('schedule.html')">일정</div>
+  <div class="category" id="todo" onclick="navigateTo('todo.html')">할 일</div>
+  <div id="title">제목</div>
+  <div id="first-input" contenteditable></div>
+  <div id="goal3">목표</div>
+  <div id="second-input" contenteditable=></div>
+  <div class="blue-rectangle" style="width: 61px; height: 35px;"></div>
+  <div id="location3">장소</div>
+  <div id="third-input" contenteditable></div>
+  <div id="content3">내용</div>
+  <div id="fourth-input" contenteditable></div>
+  <button class="save-button">저장</button>
+</body>
+<script>
+  function navigateTo(page) {
+    window.location.href = page; // 페이지 이동
+  }
+  const photoInput = document.getElementById("photo-input");
+  const photoPreview = document.querySelector(".photo-preview");
+  const photoInputDiv = document.querySelector(".photo-input");
+  const photoLabel = document.querySelector("label[for='photo-input']");
+
+  photoInput.addEventListener("change", function () {
+    const file = this.files[0];
+    if (file) {
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        photoInputDiv.style.backgroundImage = `url(${e.target.result})`;
+        photoLabel.style.display = "none"; // 레이블 숨기기
+      };
+
+      reader.readAsDataURL(file);
+    } else {
+      photoInputDiv.style.backgroundImage = "none";
+      photoLabel.style.display = "block"; // 레이블 표시
+    }
+  });
+</script>
+
+</html>

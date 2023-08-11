@@ -1,0 +1,328 @@
+/* 전체 영역 */
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  background-color: #FFFFFF;
+}
+
+/* 일정 분류*/
+.category {
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* 상단 목표 */
+#goal {
+  position: absolute;
+  width: 50px;
+  height: 20px;
+  left: 30px;
+  top: 27px;
+  color: #808080
+}
+
+/* 상단 일정 */
+#schedule {
+  position: absolute;
+  width: 50px;
+  height: 20px;
+  left: 100px;
+  top: 27px;
+  color: #808080;
+}
+
+/* 상단 할 일 */
+#todo {
+  position: absolute;
+  width: 55px;
+  height: 20px;
+  left: 170px;
+  top: 27px;
+  color: #808080;
+}
+
+.blue-rectangle {
+  background: #00A6ED;
+  border-radius: 10px;
+  position: absolute;
+  left: 305px;
+  top: 34px;
+}
+
+/* 저장 */
+.save-button {
+  font-size: 15px;
+  line-height: 18px;
+  color: #FFFFFF;
+  background-color: #00A6ED;
+  border: none;
+  border-radius: 0px;
+  position: absolute;
+  left: 314px;
+  top: 42px;
+}
+
+/* 제목 */
+#title {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 90px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 목표&일정-기간 */
+#date {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 196px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 목표-장소 */
+#location {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 294px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 일정-목표 */
+#goal2 {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 294px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 목표-내용 */
+#content {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 392px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 목표-사진 */
+#photo {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 620px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000
+}
+
+/* 일정-장소 */
+#location2 {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 392px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 일정-내용 */
+#content2 {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 505px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 할일-목표 */
+#goal3 {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 196px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 할일-장소 */
+#location3 {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 294px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 할 일-내용 */
+#content3 {
+  position: absolute;
+  width: 179px;
+  height: 20px;
+  left: 28px;
+  top: 392px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18px;
+  color: #000000;
+}
+
+/* 첫번째 입력 */
+#first-input {
+  position: absolute;
+  width: 339px;
+  height: 49px;
+  left: 28px;
+  top: 120px;
+  box-sizing: border-box;
+  border: 1px solid #9D9D9D;
+  border-radius: 6px;
+}
+
+/* 두번째 입력 */
+#second-input {
+  position: absolute;
+  width: 339px;
+  height: 49px;
+  left: 28px;
+  top: 220px;
+  box-sizing: border-box;
+  border: 1px solid #9D9D9D;
+  border-radius: 6px;
+}
+
+/* 세번째 입력 */
+#third-input {
+  position: absolute;
+  width: 339px;
+  height: 49px;
+  left: 28px;
+  top: 322px;
+  box-sizing: border-box;
+  border: 1px solid #9D9D9D;
+  border-radius: 6px;
+}
+
+/* 일정-장소 & 할일-내용 입력 */
+#fourth-input {
+  position: absolute;
+  width: 339px;
+  height: 49px;
+  left: 28px;
+  top: 420px;
+  box-sizing: border-box;
+  border: 1px solid #9D9D9D;
+  border-radius: 6px;
+  resize: none;
+}
+
+/* 목표-내용 입력 */
+#content-input {
+  position: absolute;
+  width: 339px;
+  height: 170px;
+  left: 28px;
+  top: 420px;
+  box-sizing: border-box;
+  border: 1px solid #9D9D9D;
+  border-radius: 6px;
+  resize: none;
+}
+
+/* 목표-사진 입력 */
+#photo-input {
+  position: absolute;
+  width: 339px;
+  height: 170px;
+  left: 28px;
+  top: 645px;
+  box-sizing: border-box;
+  border: 1px solid #9D9D9D;
+  border-radius: 6px;
+  resize: none;
+  /* 추가 */
+}
+
+
+/* 일정-내용 입력 */
+#content2-input {
+  position: absolute;
+  width: 339px;
+  height: 49px;
+  left: 28px;
+  top: 530px;
+  box-sizing: border-box;
+  border: 1px solid #9D9D9D;
+  border-radius: 6px;
+  resize: none;
+}
+
+.photo-container {
+  position: relative;
+}
+
+.photo-input {
+  position: absolute;
+  width: 339px;
+  height: 170px;
+  left: 28px;
+  top: 645px;
+  box-sizing: border-box;
+  border: 1px solid #9D9D9D;
+  border-radius: 6px;
+  resize: none;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.category {
+  cursor: pointer;
+  margin: 10px 0;
+  transition: background-color 0.3s;
+}
+
+.category:hover {
+  background-color: lightgray;
+}
