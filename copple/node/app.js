@@ -13,7 +13,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-var main = require('./routes/main.js');
+var main = require('./routes/main2.js');
 app.use('/', main);
 
 app.listen(app.get('port'), () => {
