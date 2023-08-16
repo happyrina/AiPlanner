@@ -1,6 +1,8 @@
 #node
 copple/node/node_modules
 copple/node/package*
+copple/node/.env
 
 copple/node2/node_modules
 copple/node2/package*
+

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const AWS = require('aws-sdk');
 const cookieParser = require('cookie-parser');
 
+
 const path = require('path');
 const app = express();
 
@@ -12,8 +13,10 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+
 const dynamodb = new AWS.DynamoDB({ region: 'ap-northeast-2' });
 const tableName = 'Account';
+
 
 // 사용자 ID가 이미 존재하는지 확인하는 함수
 async function isUserExists(userId) {
@@ -98,7 +101,7 @@ app.post("/account/login", async (req, res) => {
 
       return res.json({ message: "로그인 성공" });
     } else {
-      return res.status(401).json({ detail: "로그인 실패 - 잘못된 사용자 정보입니다." });
+      return res.status(401).json({ detail: "아이디와 비밀번호를 확인해주세요." });
     }
   } catch (error) {
     console.error('오류 발생:', error);
@@ -209,16 +212,17 @@ app.post("/account/find/pw", async (req, res) => {
   
       console.log("새로운 임시 비밀번호:", newTemporaryPassword); // 새로운 임시 비밀번호 로깅
   
-      // 사용자의 비밀번호 업데이트
+      // 사용자의 비밀번호와 PasswordCheck 업데이트
       const updateParams = {
         TableName: tableName,
         Key: {
           'UserId': { S: user_id },
           'UserName': { S: user_name },
         },
-        UpdateExpression: 'SET Password = :password',
+        UpdateExpression: 'SET Password = :password, PasswordCheck = :passwordCheck', // PasswordCheck 업데이트
         ExpressionAttributeValues: {
           ':password': { S: newTemporaryPassword },
+          ':passwordCheck': { S: newTemporaryPassword }, // PasswordCheck도 새로운 비밀번호로 업데이트
         },
       };
   
@@ -230,6 +234,7 @@ app.post("/account/find/pw", async (req, res) => {
       return res.status(500).json({ detail: "내부 서버 오류" });
     }
   });
+
 
 // POST 엔드포인트 "/account/find/id"
 app.post("/account/find/id", async (req, res) => {
