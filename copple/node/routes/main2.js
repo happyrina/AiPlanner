@@ -3,7 +3,11 @@ const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const AWS = require('aws-sdk');
 const cookieParser = require('cookie-parser');
+const S3 = new AWS.S3({ region: 'ap-northeast-2' });
+const multer = require('multer');
 
+const storage = multer.memoryStorage(); // 파일을 메모리에 버퍼로 저장
+const upload = multer({ storage: storage });
 
 const path = require('path');
 const app = express();
@@ -13,10 +17,8 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-
 const dynamodb = new AWS.DynamoDB({ region: 'ap-northeast-2' });
 const tableName = 'Account';
-
 
 // 사용자 ID가 이미 존재하는지 확인하는 함수
 async function isUserExists(userId) {
@@ -118,41 +120,41 @@ app.post("/account/logout", requireLogin, (req, res) => {
 
 // POST 엔드포인트 "/account/signup"
 app.post("/account/signup", async (req, res) => {
-    const { user_id, user_name, password, passwordcheck } = req.body;
-  
-    if (await isUserExists(user_id)) {
-      return res.status(400).json({ detail: "해당 사용자 ID가 이미 존재합니다." });
-    }
-  
-    if (await isUserNameExists(user_name)) {
-      return res.status(400).json({ detail: "해당 사용자 이름은 이미 사용 중입니다." });
-    }
-  
-    if (password !== passwordcheck) {
-      return res.status(400).json({ detail: "비밀번호가 일치하지 않습니다." });
-    }
-  
-    const user_uuid = uuidv4();
-  
-    const params = {
-      TableName: tableName,
-      Item: {
-        'UserId': { S: user_id },
-        'UserName': { S: user_name },
-        'Password': { S: password },
-        'PasswordCheck': { S: passwordcheck },
-        'UUID': { S: user_uuid },
-      },
-    };
-  
-    try {
-      await dynamodb.putItem(params).promise();
-      return res.json({ message: "사용자 등록 완료", user_uuid: user_uuid });
-    } catch (error) {
-      console.error('오류 발생:', error);
-      return res.status(500).json({ detail: "내부 서버 오류" });
-    }
-  });
+  const { user_id, user_name, password, passwordcheck } = req.body;
+
+  if (await isUserExists(user_id)) {
+    return res.status(400).json({ detail: "해당 사용자 ID가 이미 존재합니다." });
+  }
+
+  if (await isUserNameExists(user_name)) {
+    return res.status(400).json({ detail: "해당 사용자 이름은 이미 사용 중입니다." });
+  }
+
+  if (password !== passwordcheck) {
+    return res.status(400).json({ detail: "비밀번호가 일치하지 않습니다." });
+  }
+
+  const user_uuid = uuidv4();
+
+  const params = {
+    TableName: tableName,
+    Item: {
+      'UserId': { S: user_id },
+      'UserName': { S: user_name },
+      'Password': { S: password },
+      'PasswordCheck': { S: passwordcheck },
+      'UUID': { S: user_uuid },
+    },
+  };
+
+  try {
+    await dynamodb.putItem(params).promise();
+    return res.json({ message: "사용자 등록 완료", user_uuid: user_uuid });
+  } catch (error) {
+    console.error('오류 발생:', error);
+    return res.status(500).json({ detail: "내부 서버 오류" });
+  }
+});
 
 // GET 엔드포인트 "/account/profile"
 app.get("/account/profile", requireLogin, async (req, res) => {
@@ -190,7 +192,7 @@ app.get("/account/profile", requireLogin, async (req, res) => {
 // POST 엔드포인트 "/account/find/pw"
 app.post("/account/find/pw", async (req, res) => {
     const { user_id, user_name } = req.body;
-  
+
     try {
       const params = {
         TableName: tableName,
@@ -235,28 +237,27 @@ app.post("/account/find/pw", async (req, res) => {
     }
   });
 
-
 // POST 엔드포인트 "/account/find/id"
 app.post("/account/find/id", async (req, res) => {
     const { user_name } = req.body;
-  
+
     try {
       const params = {
         TableName: tableName,
         FilterExpression: 'UserName = :name',
         ExpressionAttributeValues: { ':name': { S: user_name } },
       };
-  
+
       const response = await dynamodb.scan(params).promise();
       const usersWithSameName = response.Items;
-  
+
       if (usersWithSameName.length === 0) {
         return res.status(404).json({ detail: "해당 이름의 사용자가 없습니다." });
       }
-  
+
       // 사용자 ID 반환
       const userIDs = usersWithSameName.map(user => user.UserId.S);
-  
+
       return res.json({ user_ids: userIDs });
     } catch (error) {
       console.error('오류 발생:', error);
@@ -278,7 +279,7 @@ app.patch("/account/profile/edit", requireLogin, async (req, res) => {
       const userId = req.user.user_id;
       const userName = req.user.user_name;
       const { new_password, new_password_check } = req.body;
-  
+
       // UserId 및 UserName을 기반으로 사용자 프로필 정보 가져오기
       const params = {
         TableName: tableName,
@@ -287,19 +288,19 @@ app.patch("/account/profile/edit", requireLogin, async (req, res) => {
           'UserName': { S: userName },
         },
       };
-  
+
       const response = await dynamodb.getItem(params).promise();
       const userProfile = response.Item;
-  
+
       if (!userProfile) {
         return res.status(404).json({ detail: "프로필을 찾을 수 없습니다." });
       }
-  
+
       // 새로운 비밀번호가 일치하는지 확인
       if (new_password !== new_password_check) {
         return res.status(400).json({ detail: "새 비밀번호가 일치하지 않습니다." });
       }
-  
+
       // 사용자의 비밀번호와 PasswordCheck 업데이트
       const updateParams = {
         TableName: tableName,
@@ -313,9 +314,9 @@ app.patch("/account/profile/edit", requireLogin, async (req, res) => {
           ':passwordCheck': { S: new_password_check }, // PasswordCheck에 값 제공
         },
       };
-  
+
       await dynamodb.updateItem(updateParams).promise();
-  
+
       return res.json({ message: "비밀번호 업데이트가 성공적으로 완료되었습니다." });
     } catch (error) {
       console.error('오류 발생:', error);
@@ -323,58 +324,188 @@ app.patch("/account/profile/edit", requireLogin, async (req, res) => {
     }
 });
 
-// POST 엔드포인트 "/account/add/photo"
-app.post("/account/add/photo", requireLogin, async (req, res) => {
-    try {
-      const userId = req.user.user_id;
-      const userName = req.user.user_name;
-      const { photo_url } = req.body;
-  
-      // 사용자의 프로필을 새로운 사진 URL로 업데이트
-      const updateParams = {
-        TableName: tableName,
-        Key: {
-          'UserId': { S: userId },
-          'UserName': { S: userName },
-        },
-        UpdateExpression: 'SET PhotoUrl = :photoUrl',
-        ExpressionAttributeValues: {
-          ':photoUrl': { S: photo_url },
-        },
-      };
-  
-      await dynamodb.updateItem(updateParams).promise();
-  
-      return res.json({ message: "프로필 사진 업로드가 성공적으로 완료되었습니다." });
-    } catch (error) {
-      console.error('오류 발생:', error);
-      return res.status(500).json({ detail: "내부 서버 오류" });
+app.post("/account/upload/photo", requireLogin, upload.single('profilePhoto'), async (req, res) => {
+  try {
+    const userId = req.user.user_id; // 로그인된 사용자의 ID
+    const userName = req.user.user_name; // 로그인된 사용자의 이름
+    const { originalname, buffer } = req.file; // 업로드된 파일 데이터
+
+    // Amazon S3 객체 키 생성
+    const s3Key = `profile_photos/${userId}-${Date.now()}-${originalname}`;
+
+    // Amazon S3 업로드 매개변수
+    const s3UploadParams = {
+      Bucket: 'seo-3169', // 사용할 S3 버킷 이름
+      Key: s3Key,
+      Body: buffer,
+      ContentType: 'image/jpeg', // 적절한 콘텐츠 타입 설정
+    };
+
+    // 이미지 데이터 Amazon S3에 업로드
+    await S3.upload(s3UploadParams).promise();
+
+    // 사용자 프로필의 PhotoUrl 업데이트
+    const updateParams = {
+      TableName: tableName,
+      Key: {
+        'UserId': { S: userId },
+        'UserName': { S: userName },
+      },
+      UpdateExpression: 'SET PhotoUrl = :photoUrl',
+      ExpressionAttributeValues: {
+        ':photoUrl': { S: `seo-3169/${s3Key}` }, // S3 URL로 업데이트
+      },
+    };
+
+    await dynamodb.updateItem(updateParams).promise();
+
+    return res.json({ message: "프로필 사진 업로드가 성공적으로 완료되었습니다." });
+  } catch (error) {
+    console.error('오류 발생:', error);
+    return res.status(500).json({ detail: "내부 서버 오류" });
+  }
+});
+
+// GET 엔드포인트 "/account/profile/photo"
+app.get("/account/profile/photo", requireLogin, async (req, res) => {
+  try {
+    const userId = req.user.user_id; // 로그인된 사용자의 ID
+    const userName = req.user.user_name; // 로그인된 사용자의 이름
+
+    // UserId 및 UserName을 기반으로 사용자 프로필 정보 가져오기
+    const params = {
+      TableName: tableName,
+      Key: {
+        'UserId': { S: userId },
+        'UserName': { S: userName },
+      },
+    };
+
+    const response = await dynamodb.getItem(params).promise();
+    const userProfile = response.Item;
+
+    if (!userProfile) {
+      return res.status(404).json({ detail: "프로필을 찾을 수 없습니다." });
     }
+
+    // 프로필 사진 URL 반환
+    const photoUrl = userProfile.PhotoUrl ? userProfile.PhotoUrl.S : null;
+    if (!photoUrl) {
+      return res.status(404).json({ detail: "프로필 사진을 찾을 수 없습니다." });
+    }
+
+    return res.json({ photoUrl: photoUrl });
+  } catch (error) {
+    console.error('오류 발생:', error);
+    return res.status(500).json({ detail: "내부 서버 오류" });
+  }
+});
+
+// GET 엔드포인트 "/account/download/photo"
+app.get("/account/download/photo", requireLogin, async (req, res) => {
+  try {
+    const userId = req.user.user_id; // 로그인된 사용자의 ID
+    const userName = req.user.user_name; // 로그인된 사용자의 이름
+
+    // UserId 및 UserName을 기반으로 사용자 프로필 정보 가져오기
+    const params = {
+      TableName: tableName,
+      Key: {
+        'UserId': { S: userId },
+        'UserName': { S: userName },
+      },
+    };
+
+    const response = await dynamodb.getItem(params).promise();
+    const userProfile = response.Item;
+
+    if (!userProfile) {
+      return res.status(404).json({ detail: "프로필을 찾을 수 없습니다." });
+    }
+
+    // 프로필 사진 URL 반환
+    const photoUrl = userProfile.PhotoUrl ? userProfile.PhotoUrl.S : null;
+    if (!photoUrl) {
+      return res.status(404).json({ detail: "프로필 사진을 찾을 수 없습니다." });
+    }
+
+    // Amazon S3 객체 키 추출
+    const s3Key = photoUrl.replace('seo-3169/', '');
+
+    // Amazon S3에서 이미지 데이터 추출
+    const s3DownloadParams = {
+      Bucket: 'seo-3169',
+      Key: s3Key,
+    };
+    const image = await S3.getObject(s3DownloadParams).promise();
+
+    // 이미지 데이터 반환
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.send(image.Body);
+  } catch (error) {
+    console.error('오류 발생:', error);
+    return res.status(500).json({ detail: "내부 서버 오류" });
+  }
 });
 
 // DELETE 엔드포인트 "/account/delete/photo"
 app.delete("/account/delete/photo", requireLogin, async (req, res) => {
-    try {
-      const userId = req.user.user_id;
-      const userName = req.user.user_name;
-  
-      // 사용자 프로필에서 사진 URL 제거
-      const updateParams = {
-        TableName: tableName,
-        Key: {
-          'UserId': { S: userId },
-          'UserName': { S: userName },
-        },
-        UpdateExpression: 'REMOVE PhotoUrl',
-      };
-  
-      await dynamodb.updateItem(updateParams).promise();
-  
-      return res.json({ message: "프로필 사진 삭제가 성공적으로 완료되었습니다." });
-    } catch (error) {
-      console.error('오류 발생:', error);
-      return res.status(500).json({ detail: "내부 서버 오류" });
+  try {
+    const userId = req.user.user_id; // 로그인된 사용자의 ID
+    const userName = req.user.user_name; // 로그인된 사용자의 이름
+
+    // UserId 및 UserName을 기반으로 사용자 프로필 정보 가져오기
+    const params = {
+      TableName: tableName,
+      Key: {
+        'UserId': { S: userId },
+        'UserName': { S: userName },
+      },
+    };
+
+    const response = await dynamodb.getItem(params).promise();
+    const userProfile = response.Item;
+
+    if (!userProfile) {
+      return res.status(404).json({ detail: "프로필을 찾을 수 없습니다." });
     }
+
+    // 프로필 사진 URL 반환
+    const photoUrl = userProfile.PhotoUrl ? userProfile.PhotoUrl.S : null;
+    if (!photoUrl) {
+      return res.status(404).json({ detail: "프로필 사진을 찾을 수 없습니다." });
+    }
+
+    // Amazon S3 객체 키 추출
+    const s3Key = photoUrl.replace('seo-3169/', '');
+
+    // Amazon S3에서 이미지 데이터 삭제
+    const s3DeleteParams = {
+      Bucket: 'seo-3169',
+      Key: s3Key,
+    };
+    await S3.deleteObject(s3DeleteParams).promise();
+
+    // 사용자 프로필의 PhotoUrl 업데이트 (null로 설정)
+    const updateParams = {
+      TableName: tableName,
+      Key: {
+        'UserId': { S: userId },
+        'UserName': { S: userName },
+      },
+      UpdateExpression: 'SET PhotoUrl = :photoUrl',
+      ExpressionAttributeValues: {
+        ':photoUrl': { NULL: true }, // PhotoUrl 값을 null로 업데이트
+      },
+    };
+
+    await dynamodb.updateItem(updateParams).promise();
+
+    return res.json({ message: "프로필 사진 삭제가 성공적으로 완료되었습니다." });
+  } catch (error) {
+    console.error('오류 발생:', error);
+    return res.status(500).json({ detail: "내부 서버 오류" });
+  }
 });
 
 module.exports = app; // 애플리케이션 모듈로 내보내기
