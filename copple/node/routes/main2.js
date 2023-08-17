@@ -497,7 +497,7 @@ app.delete("/account/delete/photo", requireLogin, async (req, res) => {
       ExpressionAttributeValues: {
         ':photoUrl': { NULL: true }, // PhotoUrl 값을 null로 업데이트
       },
-    };
+    }; 
 
     await dynamodb.updateItem(updateParams).promise();
 
@@ -507,5 +507,7 @@ app.delete("/account/delete/photo", requireLogin, async (req, res) => {
     return res.status(500).json({ detail: "내부 서버 오류" });
   }
 });
+
+
 
 module.exports = app; // 애플리케이션 모듈로 내보내기
