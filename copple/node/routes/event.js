@@ -20,6 +20,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // AWS DynamoDB 설정
 const dynamodb = new AWS.DynamoDB({ region: 'ap-northeast-2' });
+const tableName = 'Account';
 
 
 // 디버깅: 토큰이 올바르게 수신되었는지 확인
