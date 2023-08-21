@@ -1,6 +1,6 @@
 #node
-copple/node/node_modules
-copple/node/package*
+node/node_modules
+node/package*
 
-copple/node2/node_modules
-copple/node2/package*
+oauth/node_modules
+oauth/package*
