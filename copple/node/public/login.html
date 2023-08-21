@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>User Authentication Demo - Login</title>
+</head>
+
+<body>
+    <h1>User Authentication Demo - Login</h1>
+
+    <form id="login-form">
+        <h2>로그인</h2>
+        <input type="text" id="login-user-id" placeholder="사용자 ID" required>
+        <input type="text" id="login-user-name" placeholder="사용자명" required>
+        <input type="password" id="login-password" placeholder="비밀번호" required>
+        <button type="submit">로그인</button>
+    </form>
+
+    <button id="logout-button" style="display: none;">로그아웃</button>
+
+    <div id="message"></div>
+
+    <script>
+        if (document.cookie) {
+            window.location.href = "/a"
+        }
+        const loginForm = document.getElementById('login-form');
+        const logoutButton = document.getElementById('logout-button');
+        const messageDiv = document.getElementById('message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const user_id = document.getElementById('login-user-id').value;
+            const user_name = document.getElementById('login-user-name').value;
+            const password = document.getElementById('login-password').value;
+
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_id, user_name, password }),
+            });
+
+            const data = await response.json();
+            messageDiv.textContent = data.message;
+
+            if (response.status === 200) {
+                // 로그인 폼 숨기고 로그아웃 버튼 표시
+                loginForm.style.display = 'none';
+                logoutButton.style.display = 'block';
+
+                // 로그인 성공한 경우 main.html 페이지로 이동
+                window.location.href = '/goal.html';  // Change this URL to the correct path
+            }
+        });
+
+        logoutButton.addEventListener('click', async () => {
+            const response = await fetch('/logout', {
+                method: 'POST',
+            });
+
+            if (response.status === 200) {
+                // 로그아웃 버튼 숨기고 로그인 폼 표시
+                loginForm.style.display = 'block';
+                logoutButton.style.display = 'none';
+                messageDiv.textContent = '로그아웃 성공';
+            }
+        });
+    </script>
+</body>
+
+</html>

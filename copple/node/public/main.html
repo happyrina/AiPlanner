@@ -1,0 +1,92 @@
+<!--index.html-->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>여행 플래너</title>
+</head>
+
+<body>
+    <h1>제주도편</h1>
+    <form id="eventForm" action="/create-event/" method="post"> <!-- 서버로 데이터를 보낼 경로와 메서드 설정 -->
+        <!-- 어디로 가실 계획이신가요? -->
+        <label>어디로 가실 계획이신가요?:</label><br>
+        <input type="checkbox" id="destination_seogwipo" name="destination" value="서귀포">
+        <label for="destination_seogwipo">서귀포</label><br>
+        <input type="checkbox" id="destination_udo" name="destination" value="우도">
+        <label for="destination_udo">우도</label><br>
+        <input type="checkbox" id="destination_aewol" name="destination" value="애월">
+        <label for="destination_aewol">애월</label><br><br>
+
+        <!-- Start Date -->
+        <label for="start_date">Start Date:</label><br>
+        <input type="date" id="start_date" name="start_date"><br>
+
+        <!-- End Date -->
+        <label for="end_date">End Date:</label><br>
+        <input type="date" id="end_date" name="end_date" max=""><br><br>
+
+        <!-- 누구랑 여행 가실 계획이신가요? -->
+        <label>누구랑 여행 가실 계획이신가요?:</label><br>
+        <input type="radio" id="companion_solo" name="companion_type" value="Solo">
+        <label for="companion_solo">Solo</label><br>
+        <input type="radio" id="companion_couple" name="companion_type" value="Couple">
+        <label for="companion_couple">Couple</label><br>
+        <input type="radio" id="companion_family" name="companion_type" value="Family">
+        <label for="companion_family">Family</label><br>
+        <input type="radio" id="companion_friends" name="companion_type" value="Friends">
+        <label for="companion_friends">Friends</label><br><br>
+
+        <!-- 여행 중 어떤 걸 하고 싶으신가요? -->
+        <label>여행 중 어떤 걸 하고 싶으신가요?:</label><br>
+        <input type="checkbox" id="interest_beach" name="interest" value="해변">
+        <label for="interest_beach">해변</label><br>
+        <input type="checkbox" id="interest_poolparty" name="interest" value="풀파티">
+        <label for="interest_poolparty">풀파티</label><br>
+        <input type="checkbox" id="interest_guesthouse" name="interest" value="게스트하우스">
+        <label for="interest_guesthouse">게스트하우스</label><br>
+        <input type="checkbox" id="interest_hiking" name="interest" value="등산">
+        <label for="interest_hiking">등산</label><br>
+        <input type="checkbox" id="interest_foodtour" name="interest" value="맛집탐방">
+        <label for="interest_foodtour">맛집탐방</label><br><br>
+
+        <button type="submit">Create Event</button>
+    </form>
+
+    <script>
+        // Date inputs
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+
+        const sixMonthsLater = new Date();
+        sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+
+        endDateInput.setAttribute('max', sixMonthsLater.toISOString().slice(0, 10));
+
+        startDateInput.addEventListener('change', updateDuration);
+        endDateInput.addEventListener('change', updateDuration);
+
+        function updateDuration() {
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+
+            if (startDate && endDate) {
+                const durationInMilliseconds = endDate - startDate;
+                const durationInDays = Math.ceil(durationInMilliseconds / (1000 * 60 * 60 * 24));
+
+                // Check if duration is within 6 months limit
+                if (durationInDays > 6 * 30) {
+                    alert('최대 여행일정계획 6개월을 초과하셨습니다.');
+                    endDateInput.value = ''; // Clear end date if it exceeds the limit
+                    return;
+                }
+
+                // Display the duration in "X박 Y일" format
+                const durationText = `${Math.floor(durationInDays / 7)}박 ${durationInDays % 7}일`;
+                document.getElementById('duration').innerText = durationText;
+            }
+        }
+    </script>
+</body>
+
+</html>

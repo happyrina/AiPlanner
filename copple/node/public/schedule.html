@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>일정</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="real.css">
+</head>
+
+<body>
+  <div class="category" id="goal" onclick="navigateTo('goal.html')">목표</div>
+  <div class="category" id="schedule" onclick="navigateTo('schedule.html')">일정</div>
+  <div class="category" id="todo" onclick="navigateTo('todo.html')">할 일</div>
+  <div class="blue-rectangle" style="width: 61px; height: 35px;"></div>
+  <button class="save-button">저장</button>
+
+  <div id="title">제목</div>
+  <div id="first-input" contenteditable></div>
+  <div id="date">기간</div>
+  <div id="second-input">
+    <select id="start-year">
+      <option value="">년</option>
+      <!-- 여기에 2000년부터 2030년까지의 년도 옵션을 추가하세요 -->
+    </select>
+    <select id="start-month">
+      <option value="">월</option>
+      <!-- 여기에 1월부터 12월까지의 월 옵션을 추가하세요 -->
+    </select>
+    <select id="start-day">
+      <option value="">일</option>
+      <!-- 여기에 1일부터 31일까지의 일 옵션을 추가하세요 -->
+    </select>
+    ~<br>
+    <select id="end-year">
+      <option value="">년</option>
+      <!-- 여기에 2000년부터 2030년까지의 년도 옵션을 추가하세요 -->
+    </select>
+    <select id="end-month">
+      <option value="">월</option>
+      <!-- 여기에 1월부터 12월까지의 월 옵션을 추가하세요 -->
+    </select>
+    <select id="end-day">
+      <option value="">일</option>
+      <!-- 여기에 1일부터 31일까지의 일 옵션을 추가하세요 -->
+    </select>
+  </div>
+  <div id="goal2">목표</div>
+  <div id="third-input" contenteditable=></div>
+  <div id="location2">장소</div>
+  <div id="fourth-input" contenteditable></div>
+  <div id="content2">내용</div>
+  <div id="content2-input" contenteditable></div>
+
+</body>
+<script>
+  function navigateTo(page) {
+    window.location.href = page; // 페이지 이동
+  }
+  const startYearSelect = document.getElementById("start-year");
+  const startMonthSelect = document.getElementById("start-month");
+  const startDaySelect = document.getElementById("start-day");
+  const endYearSelect = document.getElementById("end-year");
+  const endMonthSelect = document.getElementById("end-month");
+  const endDaySelect = document.getElementById("end-day");
+
+  // 드롭다운 메뉴 생성
+  for (let year = 2000; year <= 2030; year++) {
+    const yearOption = document.createElement("option");
+    yearOption.value = year;
+    yearOption.textContent = year + "년";
+    startYearSelect.appendChild(yearOption);
+    endYearSelect.appendChild(yearOption.cloneNode(true));
+  }
+
+  for (let month = 1; month <= 12; month++) {
+    const monthOption = document.createElement("option");
+    monthOption.value = month;
+    monthOption.textContent = month + "월";
+    startMonthSelect.appendChild(monthOption);
+    endMonthSelect.appendChild(monthOption.cloneNode(true));
+  }
+
+  for (let day = 1; day <= 31; day++) {
+    const dayOption = document.createElement("option");
+    dayOption.value = day;
+    dayOption.textContent = day + "일";
+    startDaySelect.appendChild(dayOption);
+    endDaySelect.appendChild(dayOption.cloneNode(true));
+  }
+
+  // 기본값 설정 (예: 2023년 8월 10일)
+  startYearSelect.value = 2023;
+  startMonthSelect.value = 8;
+  startDaySelect.value = 10;
+  endYearSelect.value = 2023;
+  endMonthSelect.value = 8;
+  endDaySelect.value = 13;
+</script>
+
+</html>

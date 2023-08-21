@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/static/reset.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <title>signUpForm</title>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="wrapper-center">
+        <div class="title">
+          <h1>회원가입</h1>
+        </div>
+        <form id="signupForm">
+          <!-- 성명 입력 -->
+          <div class="userInput">
+            <h5 class="list">성명<span id="nameError"></span></h5>
+            <span class="box int_id"
+              ><input type="text" id="name" class="int check" maxlength="20" placeholder="성명을 입력하세요."
+            /></span>
+          </div>
+          <div class="userInput">
+            <!-- 아이디 입력 -->
+            <h5 class="list">아이디<span id="idError"></span></h5>
+            <span class="box int_id"
+              ><input type="text" id="id" class="int check" maxlength="20" placeholder="아이디를 입력하세요."
+            /></span>
+          </div>
+          <div class="userInput">
+            <!-- 비밀번호 입력 -->
+            <h5 class="list">비밀번호<span id="pwError"></span></h5>
+            <span class="box int_id"
+              ><input type="password" id="pw" class="int check" maxlength="20" placeholder="비밀번호를 입력하세요."
+            /></span>
+          </div>
+          <!-- 비밀번호 재확인 입력 -->
+          <div class="userInput">
+            <h5 class="list">비밀번호 재확인<span id="pwCheckError"></span></h5>
+            <span class="box int_id"
+              ><input
+                type="password"
+                id="pwCheck"
+                class="int check"
+                maxlength="20"
+                placeholder="비밀번호를 다시 입력하세요."
+            /></span>
+          </div>
+          <input type="submit" value="회원가입" />
+        </form>
+      </div>
+    </div>
+    <script>
+      const signupForm = document.getElementById("signupForm");
+    
+      signupForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+    
+        const name = document.getElementById("name").value;
+        const id = document.getElementById("id").value;
+        const pw = document.getElementById("pw").value;
+        const pwCheck = document.getElementById("pwCheck").value;
+    
+        try {
+          const data = new URLSearchParams({
+            user_id: id,
+            user_name: name,
+            password: pw,
+            passwordcheck: pwCheck,
+          });
+    
+          const response = await axios.post("http://3.39.153.9:8000/signup/", data, {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+          });
+    
+          console.log(response.data.message);
+          // Handle the response as needed, such as displaying a success message.
+        } catch (error) {
+          console.error("Error signing up:", error.response.data.detail);
+          // Handle signup failure, display an error message, etc.
+        }
+      });
+    </script>
+    
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>User Authentication Demo - Sign Up</title>
+</head>
+
+<body>
+    <h1>User Authentication Demo - Sign Up</h1>
+
+    <form id="signup-form">
+        <h2>Become a member</h2>
+        <input type="text" id="signup-user-id" placeholder="userid" required>
+        <input type="text" id="signup-user-name" placeholder="username" required>
+        <input type="password" id="signup-password" placeholder="password" required>
+        <input type="password" id="signup-passwordcheck" placeholder="check password" required>
+        <button type="submit">Sign up</button>
+    </form>
+
+    <div id="message"></div>
+
+    <script>
+        if (document.cookie) {
+                window.location.href = "/mypage"
+            }
+
+        const signupForm = document.getElementById('signup-form');
+        const messageDiv = document.getElementById('message');
+
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const user_id = document.getElementById('signup-user-id').value;
+            const user_name = document.getElementById('signup-user-name').value;
+            const password = document.getElementById('signup-password').value;
+            const passwordcheck = document.getElementById('signup-passwordcheck').value;
+
+            const response = await fetch('/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_id, user_name, password, passwordcheck }),
+            });
+
+            const data = await response.json();
+            messageDiv.textContent = data.message;
+
+            if (response.status === 200) {
+                // Redirect to login.html upon successful signup
+                window.location.href = '/loginpage';
+            }
+        });
+    </script>
+</body>
+
+</html>

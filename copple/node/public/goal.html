@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>목표</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="real.css">
+</head>
+
+<body>
+  <div class="category" id="goal" onclick="navigateTo('goal.html')">목표</div>
+  <div class="category" id="schedule" onclick="navigateTo('schedule.html')">일정</div>
+  <div class="category" id="todo" onclick="navigateTo('todo.html')">할 일</div>
+  <div class="blue-rectangle" style="width: 61px; height: 35px;"></div>
+  <button class="save-button" onclick="saveEvent()">저장</button>
+
+  <div id="title">제목</div>
+  <div id="first-input" contenteditable></div>
+  <div id="date">기간</div>
+  <div id="second-input">
+    <select id="start-year">
+      <option value="">년</option>
+      <!-- 여기에 2000년부터 2030년까지의 년도 옵션을 추가하세요 -->
+    </select>
+    <select id="start-month">
+      <option value="">월</option>
+      <!-- 여기에 1월부터 12월까지의 월 옵션을 추가하세요 -->
+    </select>
+    <select id="start-day">
+      <option value="">일</option>
+      <!-- 여기에 1일부터 31일까지의 일 옵션을 추가하세요 -->
+    </select>
+    ~<br>
+    <select id="end-year">
+      <option value="">년</option>
+      <!-- 여기에 2000년부터 2030년까지의 년도 옵션을 추가하세요 -->
+    </select>
+    <select id="end-month">
+      <option value="">월</option>
+      <!-- 여기에 1월부터 12월까지의 월 옵션을 추가하세요 -->
+    </select>
+    <select id="end-day">
+      <option value="">일</option>
+      <!-- 여기에 1일부터 31일까지의 일 옵션을 추가하세요 -->
+    </select>
+  </div>
+  <div id="location">장소</div>
+  <div id="third-input" contenteditable></div>
+  <div id="content">내용</div>
+  <div id="content-input" contenteditable></div>
+  <div id="photo">사진</div>
+  <div class="photo-container">
+    <div class="photo-input">
+      <label for="photo-input" style="cursor: pointer;">사진 첨부</label>
+    </div>
+    <input type="file" id="photo-input" class="input-field" style="display: none;">
+  </div>
+  <div class="photo-preview"></div>
+
+
+  <script>
+    function navigateTo(page) {
+      window.location.href = page; // 페이지 이동
+    }
+    const photoInput = document.getElementById("photo-input");
+    const photoPreview = document.querySelector(".photo-preview");
+    const photoInputDiv = document.querySelector(".photo-input");
+    const photoLabel = document.querySelector("label[for='photo-input']");
+
+    photoInput.addEventListener("change", function () {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+          photoInputDiv.style.backgroundImage = `url(${e.target.result})`;
+          photoLabel.style.display = "none"; // 레이블 숨기기
+        };
+
+        reader.readAsDataURL(file);
+      } else {
+        photoInputDiv.style.backgroundImage = "none";
+        photoLabel.style.display = "block"; // 레이블 표시
+      }
+    });
+
+    //저장기능
+    function saveEvent() {
+      const title = document.getElementById("first-input").textContent;
+      const startYear = document.getElementById("start-year").value;
+      const startMonth = document.getElementById("start-month").value;
+      const startDay = document.getElementById("start-day").value;
+      const endYear = document.getElementById("end-year").value;
+      const endMonth = document.getElementById("end-month").value;
+      const endDay = document.getElementById("end-day").value;
+      const location = document.getElementById("third-input").textContent;
+      const content = document.getElementById("content-input").textContent;
+      const photoUrl = ""; // 이미지 업로드 관련 로직 추가
+
+      // 데이터를 서버에 보내 DynamoDB에 저장하는 로직 추가
+      fetch("/create-event", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          startYear,
+          startMonth,
+          startDay,
+          endYear,
+          endMonth,
+          endDay,
+          location,
+          content,
+          photoUrl,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("이벤트가 성공적으로 생성되었습니다.", data);
+          // 이벤트 생성 후 어떤 동작을 수행하려면 여기에 추가
+        })
+        .catch((error) => {
+          console.error("이벤트 생성 오류:", error);
+          // 오류 처리 로직 추가
+        });
+    }
+    const startYearSelect = document.getElementById("start-year");
+    const startMonthSelect = document.getElementById("start-month");
+    const startDaySelect = document.getElementById("start-day");
+    const endYearSelect = document.getElementById("end-year");
+    const endMonthSelect = document.getElementById("end-month");
+    const endDaySelect = document.getElementById("end-day");
+
+    // 드롭다운 메뉴 생성
+    for (let year = 2000; year <= 2030; year++) {
+      const yearOption = document.createElement("option");
+      yearOption.value = year;
+      yearOption.textContent = year + "년";
+      startYearSelect.appendChild(yearOption);
+      endYearSelect.appendChild(yearOption.cloneNode(true));
+    }
+
+    for (let month = 1; month <= 12; month++) {
+      const monthOption = document.createElement("option");
+      monthOption.value = month;
+      monthOption.textContent = month + "월";
+      startMonthSelect.appendChild(monthOption);
+      endMonthSelect.appendChild(monthOption.cloneNode(true));
+    }
+
+    for (let day = 1; day <= 31; day++) {
+      const dayOption = document.createElement("option");
+      dayOption.value = day;
+      dayOption.textContent = day + "일";
+      startDaySelect.appendChild(dayOption);
+      endDaySelect.appendChild(dayOption.cloneNode(true));
+    }
+
+    // 기본값 설정 (예: 2023년 8월 10일)
+    startYearSelect.value = 2023;
+    startMonthSelect.value = 8;
+    startDaySelect.value = 10;
+    endYearSelect.value = 2023;
+    endMonthSelect.value = 8;
+    endDaySelect.value = 13;
+  </script>
+</body>
+
+</html>
