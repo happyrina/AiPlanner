@@ -2,7 +2,7 @@ import boto3
 # Get the service resource.
 dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-2')
 
-table = dynamodb.Table('Account')
+table = dynamodb.Table('Event')
 #쿼리
 # response = table.get_item(
 #     Key={

@@ -425,6 +425,8 @@ app.get("/account/download/photo", requireLogin, async (req, res) => {
 
     // 프로필 사진 URL 반환
     const photoUrl = userProfile.PhotoUrl ? userProfile.PhotoUrl.S : null;
+    console.log(photoUrl)
+    console.log(userProfile)
     if (!photoUrl) {
       return res.status(404).json({ detail: "프로필 사진을 찾을 수 없습니다." });
     }
@@ -509,5 +511,8 @@ app.delete("/account/delete/photo", requireLogin, async (req, res) => {
 });
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3706a7e (20230819)
 module.exports = app; // 애플리케이션 모듈로 내보내기
