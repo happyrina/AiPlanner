@@ -55,20 +55,39 @@ async function isUserNameExists(userName) {
 }
 
 // 사용자 ID와 비밀번호가 유효한지 확인하는 함수
-async function isValidPassword(userId, password) {
-  const params = {
+async function isValidPassword(userId, userName, password) {
+  let params = {
     TableName: tableName,
-    Key: {
-      'UserId': { S: userId },
-    },
   };
 
-  const response = await dynamodb.getItem(params).promise();
-  const item = response.Item;
-  
-  // 검색한 아이템과 비밀번호를 비교합니다
-  return item && item.Password.S === password;
+  if (userName) {
+    params.FilterExpression = 'UserId = :id AND UserName = :name';
+    params.ExpressionAttributeValues = {
+      ':id': { S: userId },
+      ':name': { S: userName },
+    };
+  } else {
+    params.FilterExpression = 'UserId = :id';
+    params.ExpressionAttributeValues = {
+      ':id': { S: userId },
+    };
+  }
+
+  try {
+    const response = await dynamodb.scan(params).promise();
+    const item = response.Items[0]; // Assuming UserId and UserName combination is unique
+
+    if (!item || item.Password.S !== password) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('오류 발생:', error);
+    return false;
+  }
 }
+
 
 
 // 디버깅: 토큰이 제대로 수신되었는지 확인하는 미들웨어 함수
@@ -90,17 +109,18 @@ function requireLogin(req, res, next) {
   }
 }
 
+
 // POST 엔드포인트 "/account/login"
 app.post("/account/login", async (req, res) => {
-  const { user_id, password } = req.body;
+  const { user_id, password } = req.body; // user_name 제거
 
   if (!password) {
     return res.status(400).json({ detail: "비밀번호를 입력해주세요." });
   }
 
   try {
-    if (await isValidPassword(user_id, password)) {
-      const token = jwt.sign({ user_id }, 'secret_key', { expiresIn: '1h' });
+    if (await isValidPassword(user_id, null, password)) { // user_name 인자 제거
+      const token = jwt.sign({ user_id }, 'secret_key', { expiresIn: '1h' }); // user_name 제거
       res.cookie("token", token);
 
       return res.json({ message: "로그인 성공" });
@@ -112,7 +132,6 @@ app.post("/account/login", async (req, res) => {
     return res.status(500).json({ detail: "내부 서버 오류" });
   }
 });
-
 
 // POST 엔드포인트 "/account/logout"
 app.post("/account/logout", requireLogin, (req, res) => {
@@ -162,15 +181,12 @@ app.post("/account/signup", async (req, res) => {
 // GET 엔드포인트 "/account/profile"
 app.get("/account/profile", requireLogin, async (req, res) => {
   try {
-    const userId = req.user.user_id;
-    const userName = req.user.user_name;
+    const userId = req.user.user_id; // Get the user ID from the token
 
-    // UserId 및 UserName을 기반으로 사용자 프로필 정보 가져오기
     const params = {
       TableName: tableName,
       Key: {
         'UserId': { S: userId },
-        'UserName': { S: userName },
       },
     };
 
@@ -178,19 +194,22 @@ app.get("/account/profile", requireLogin, async (req, res) => {
     const userProfile = response.Item;
 
     if (!userProfile) {
-      return res.status(404).json({ detail: "프로필을 찾을 수 없습니다." });
+      return res.status(404).json({ detail: "Profile not found." });
     }
 
-    // 민감한 정보 (비밀번호 등) 응답 전에 제거
+    // Exclude sensitive information like Password and PasswordCheck
     delete userProfile.Password;
     delete userProfile.PasswordCheck;
 
     return res.json({ profile: userProfile });
   } catch (error) {
-    console.error('오류 발생:', error);
-    return res.status(500).json({ detail: "내부 서버 오류" });
+    console.error('Error occurred:', error);
+    return res.status(500).json({ detail: "Internal Server Error" });
   }
 });
+
+
+
 
 // POST 엔드포인트 "/account/find/pw"
 app.post("/account/find/pw", async (req, res) => {
