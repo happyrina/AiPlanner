@@ -55,19 +55,21 @@ async function isUserNameExists(userName) {
 }
 
 // 사용자 ID와 비밀번호가 유효한지 확인하는 함수
-async function isValidPassword(userId, userName, password) {
+async function isValidPassword(userId, password) {
   const params = {
     TableName: tableName,
     Key: {
       'UserId': { S: userId },
-      'UserName': { S: userName },
     },
   };
 
   const response = await dynamodb.getItem(params).promise();
   const item = response.Item;
+  
+  // 검색한 아이템과 비밀번호를 비교합니다
   return item && item.Password.S === password;
 }
+
 
 // 디버깅: 토큰이 제대로 수신되었는지 확인하는 미들웨어 함수
 function requireLogin(req, res, next) {
@@ -90,15 +92,15 @@ function requireLogin(req, res, next) {
 
 // POST 엔드포인트 "/account/login"
 app.post("/account/login", async (req, res) => {
-  const { user_id, user_name, password } = req.body;
+  const { user_id, password } = req.body;
 
   if (!password) {
     return res.status(400).json({ detail: "비밀번호를 입력해주세요." });
   }
 
   try {
-    if (await isValidPassword(user_id, user_name, password)) {
-      const token = jwt.sign({ user_id, user_name }, 'secret_key', { expiresIn: '1h' });
+    if (await isValidPassword(user_id, password)) {
+      const token = jwt.sign({ user_id }, 'secret_key', { expiresIn: '1h' });
       res.cookie("token", token);
 
       return res.json({ message: "로그인 성공" });
@@ -110,6 +112,7 @@ app.post("/account/login", async (req, res) => {
     return res.status(500).json({ detail: "내부 서버 오류" });
   }
 });
+
 
 // POST 엔드포인트 "/account/logout"
 app.post("/account/logout", requireLogin, (req, res) => {
