@@ -7,3 +7,5 @@ oauth/package*
 
 semantic-kernel/.env
 semantic-kernel/.venv
+
+secret.json
