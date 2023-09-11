@@ -16,10 +16,15 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "swagger-autogen": "node ./swagger.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "swagger-autogen": "^2.23.5",
+    "swagger-ui-express": "^5.0.0"
+  }
 }
