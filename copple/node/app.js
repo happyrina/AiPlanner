@@ -19,10 +19,11 @@ const event = require('./routes/event.js');
 app.use(account); // account.js 모듈 호출
 app.use(event); // event.js 모듈 호출
 
-const swaggerUi = require('swagger-ui-express');
-const swaggerFile = require('./swagger-output.json')
+// const swaggerUi = require('swagger-ui-express');
+// const swaggerFile = require('./swagger-output.json')
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, { explorer: true }));
+// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, { explorer: true }));
+
 app.listen(app.get('port'), () => {
   console.log('3000 Port : Server Started...');
 });
