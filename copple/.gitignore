@@ -9,3 +9,5 @@ semantic-kernel/.env
 semantic-kernel/.venv
 
 secret.json
+
+/copple/AiPlanner/copple/node/node_modules

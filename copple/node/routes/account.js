@@ -1,26 +1,27 @@
 const express = require('express');
 const cors = require('cors');
-const { v4: uuidv4 } = require('uuid');
-const jwt = require('jsonwebtoken');
-const { DynamoDBClient, QueryCommand, GetItemCommand, PutItemCommand, ScanCommand, UpdateItemCommand } = require("@aws-sdk/client-dynamodb");
-const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = new S3Client({ region: 'ap-northeast-2' });
-const cookieParser = require('cookie-parser');
-const multer = require('multer');
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-const path = require('path');
+const { v4: uuidv4 } = require('uuid'); // UUID 생성을 위한 모듈
+const jwt = require('jsonwebtoken'); // JSON Web Token 생성 및 검증을 위한 모듈
+const { DynamoDBClient, QueryCommand, GetItemCommand, PutItemCommand, ScanCommand, UpdateItemCommand } = require("@aws-sdk/client-dynamodb"); // AWS DynamoDB와 상호 작용하기 위한 모듈
+const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3"); // AWS S3와 상호 작용하기 위한 모듈
+const s3 = new S3Client({ region: 'ap-northeast-2' }); // AWS S3 클라이언트 생성
+const cookieParser = require('cookie-parser'); // 쿠키 파싱을 위한 모듈
+const multer = require('multer'); // 파일 업로드를 위한 모듈
+const storage = multer.memoryStorage(); // 파일을 메모리에 저장
+const upload = multer({ storage: storage }); // 메모리 스토리지를 사용하여 파일 업로드 구성
+const path = require('path'); // 파일 경로를 다루기 위한 모듈
 const app = express();
 
-app.use(cors());
-app.use(express.json());
-app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(cors()); // CORS 미들웨어 설정
+app.use(express.json()); // JSON 파싱 미들웨어 설정
+app.use(cookieParser()); // 쿠키 파싱 미들웨어 설정
+app.use(express.urlencoded({ extended: true })); // URL 인코딩 미들웨어 설정
+app.use(express.static(path.join(__dirname, 'public'))); // 정적 파일 제공을 위한 미들웨어 설정
 
-const dynamodb = new DynamoDBClient({ region: 'ap-northeast-2' });
-const tableName = 'Account';
+const dynamodb = new DynamoDBClient({ region: 'ap-northeast-2' }); // AWS DynamoDB 클라이언트 생성
+const tableName = 'Account'; // DynamoDB 테이블 이름
 
+// 사용자가 존재하는지 확인하는 비동기 함수
 async function isUserExists(userId) {
   const params = {
     TableName: tableName,
@@ -38,6 +39,7 @@ async function isUserExists(userId) {
   }
 }
 
+// 사용자 이름이 이미 존재하는지 확인하는 비동기 함수
 async function isUserNameExists(userName) {
   const params = {
     TableName: tableName,
@@ -46,7 +48,7 @@ async function isUserNameExists(userName) {
   };
 
   try {
-    const command = new QueryCommand(params);
+    const command = new ScanCommand(params); // QueryCommand 대신 ScanCommand 사용
     const response = await dynamodb.send(command);
     return response.Items.length > 0;
   } catch (error) {
@@ -55,6 +57,8 @@ async function isUserNameExists(userName) {
   }
 }
 
+
+// 로그인이 필요한 미들웨어
 function requireLogin(req, res, next) {
   const token = req.cookies.token;
   console.log("토큰:", token);
@@ -73,6 +77,7 @@ function requireLogin(req, res, next) {
   }
 }
 
+// 사용자 로그인 처리
 app.post("/account/login", async (req, res) => {
   const { user_id, password } = req.body;
   const data = [user_id, password];
@@ -101,12 +106,14 @@ app.post("/account/login", async (req, res) => {
   }
 });
 
+// 사용자 로그아웃 처리
 app.post("/account/logout", requireLogin, (req, res) => {
   res.clearCookie("token");
   res.clearCookie("eventData");
   return res.json({ message: "로그아웃 성공" });
 });
 
+// 사용자 회원가입 처리
 app.post("/account/signup", async (req, res) => {
   const { user_id, user_name, password, passwordcheck } = req.body;
 
@@ -145,6 +152,16 @@ app.post("/account/signup", async (req, res) => {
   }
 });
 
+// 임시 비밀번호 생성 함수
+function generateTemporaryPassword() {
+  // 랜덤 임시 비밀번호 생성 로직 구현
+  // 여기서는 간단한 임시 비밀번호 생성 로직 사용
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const temporaryPassword = Array.from({ length: 10 }, () => characters[Math.floor(Math.random() * characters.length)]).join('');
+  return temporaryPassword;
+}
+
+// 사용자의 임시 비밀번호 발급 처리
 app.post("/account/find/pw", async (req, res) => {
   const { user_id, user_name } = req.body;
 
@@ -192,6 +209,7 @@ app.post("/account/find/pw", async (req, res) => {
   }
 });
 
+// 사용자 ID 찾기 처리
 app.post("/account/find/id", async (req, res) => {
   const { user_id } = req.body;
 
@@ -220,15 +238,63 @@ app.post("/account/find/id", async (req, res) => {
   }
 });
 
-// 임시 비밀번호 생성 함수
-function generateTemporaryPassword() {
-// 랜덤 임시 비밀번호 생성 로직 구현
-// 여기서는 간단한 임시 비밀번호 생성 로직 사용
-const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-const temporaryPassword = Array.from({ length: 10 }, () => characters[Math.floor(Math.random() * characters.length)]).join('');
-return temporaryPassword;
-}
+// 사용자의 프로필 업데이트 
+app.post("/account/profile", requireLogin, upload.single("profileImage"), async (req, res) => {
+  const user = req.user;
+  const { user_id, user_name, introduction } = req.body;
+
+  try {
+    let profileImageUrl = null; // 프로필 사진 URL 초기화
+
+    if (req.file) { // 프로필 사진이 업로드되었는지 확인
+      const fileBuffer = req.file.buffer;
+      const fileType = req.file.mimetype;
+      const key = `profile_photos/${uuidv4()}.jpg`;
+
+      const params = {
+        Bucket: 'seo-3169',
+        Key: key,
+        Body: fileBuffer,
+        ContentType: fileType,
+      };
+
+      await s3.send(new PutObjectCommand(params));
+
+      profileImageUrl = `https://${params.Bucket}.s3.ap-northeast-2.amazonaws.com/${params.Key}`;
+    }
+
+    // 나머지 데이터와 함께 DynamoDB에 저장
+    const profileParams = {
+      TableName: 'Account',
+      Item: {
+        'UserId': { S: user_id },
+        'UserName': { S: user_name },
+        'Introduction': { S: introduction },
+      },
+    };
+
+    if (profileImageUrl) {
+      profileParams.Item['ProfileImageUrl'] = { S: profileImageUrl };
+    }
+
+    await dynamodb.send(new PutItemCommand(profileParams));
+
+    const profileData = {
+      user_id,
+      user_name,
+      introduction,
+      profileImageUrl,
+    };
+
+    res.cookie('profileData', JSON.stringify(profileData));
+    return res.status(200).json({
+      message: "프로필이 성공적으로 생성되었습니다."
+    });
+  } catch (error) {
+    console.error('프로필 생성 중 오류 발생: ', error);
+    return res.status(500).json({ detail: "프로필을 생성하는 중 오류가 발생했습니다." });
+  }
+});
 
 
-
-module.exports = app;
+module.exports = app; // Express 애플리케이션을 내보내는 부분
