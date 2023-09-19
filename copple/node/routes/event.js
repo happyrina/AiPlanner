@@ -961,4 +961,6 @@ app.get("/todo/complete/:event_id", requireLogin, async (req, res) => {
   }
 });
 
+
+
 module.exports = app; // Express 애플리케이션을 내보내는 부분
