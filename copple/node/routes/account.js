@@ -310,7 +310,6 @@ app.put("/account/profile", requireLogin, upload.single("profileImage"), async (
   }
 });
 
-
 app.get("/account/profile", requireLogin, async (req, res) => {
   const { user_id } = req.user; // 로그인된 사용자의 정보는 `req.user`에서 얻을 수 있습니다.
 
@@ -345,8 +344,5 @@ app.get("/account/profile", requireLogin, async (req, res) => {
     return res.status(500).json({ detail: "프로필을 조회하는 중 오류가 발생했습니다." });
   }
 });
-
-
-
 
 module.exports = app; // Express 애플리케이션을 내보내는 부분

@@ -453,7 +453,7 @@ app.post("/event/create", requireLogin, async (req, res) => {
       title,
       startDatetime,
       endDatetime,
-      goal: selectedGoal.title, // 선택한 목표의 제목 사용
+      goal: selectedGoal.event_id, // 선택한 목표의 제목 사용
       location,
       content
     };
@@ -696,11 +696,15 @@ app.post("/todo/create", requireLogin, async (req, res) => {
   const event_id = uuidv4();
   const eventType = 'Todo';
   try {
-    // 선택한 목표의 정보를 가져오기
-    const selectedGoal = await getGoalById(goal);
-    if (!selectedGoal) {
-      return res.status(400).json({ detail: '지정된 목표를 찾을 수 없습니다.' });
+    let selectedGoal = null; // 선택한 목표 정보를 초기화
+
+    if (goal !== "") { // 목표가 비어있지 않은 경우에만 목표 정보 가져오기 시도
+      selectedGoal = await getGoalById(goal);
+      if (!selectedGoal) {
+        return res.status(400).json({ detail: '지정된 목표를 찾을 수 없습니다.' });
+      }
     }
+
     // 할 일 데이터를 DynamoDB에 저장하기 위한 파라미터 설정
     const params = {
       TableName: 'Event',
@@ -709,12 +713,16 @@ app.post("/todo/create", requireLogin, async (req, res) => {
         'UserId': { S: user.user_id },
         'EventType': { S: eventType },
         'Title': { S: title },
-        'Goal': { S: goal }, // 목표의 EventId를 사용
         'Location': { S: location },
         'Content': { S: content },
         'isCompleted': { BOOL: isCompleted } // 완료 상태를 기본값으로 추가
       },
     };
+
+    if (selectedGoal) {
+      params.Item['Goal'] = { S: goal }; // 목표가 있을 때만 Goal 필드를 추가
+    }
+
     const command = new PutItemCommand(params);
     await dynamodbClient.send(command);
     // 응답 데이터 구성
@@ -723,11 +731,15 @@ app.post("/todo/create", requireLogin, async (req, res) => {
       user_id: user.user_id,
       eventType,
       title,
-      goal: selectedGoal.title, // 선택한 목표의 제목 사용
       location,
       content,
       isCompleted
     };
+
+    if (selectedGoal) {
+      todoData.goal = selectedGoal.event_id; // 목표가 있을 때만 목표 제목 추가
+    }
+
     // 클라이언트에 응답
     return res.status(200).json({
       message: '할 일이 성공적으로 생성되었습니다.',
@@ -773,7 +785,7 @@ app.get("/todo/read", requireLogin, async (req, res) => {
       user_id: item.UserId.S,
       eventType: item.EventType.S,
       title: item.Title.S,
-      goal: item.Goal.S,
+      goal: item.Goal ? item.Goal.S : null,
       location: item.Location.S,
       content: item.Content.S,
       isCompleted: item.isCompleted ? item.isCompleted.BOOL : false // 완료 상태를 응답에 추가
@@ -804,11 +816,16 @@ app.get("/todo/read/:event_id", requireLogin, async (req, res) => {
         user_id: response.Item.UserId.S,
         eventType: response.Item.EventType.S,
         title: response.Item.Title.S,
-        goal: response.Item.Goal.S,
         location: response.Item.Location.S,
         content: response.Item.Content.S,
         isCompleted: response.Item.isCompleted ? response.Item.isCompleted.BOOL : false // 완료 상태를 응답에 추가
       };
+      // 목표 데이터가 있는 경우 가져옴
+      if (response.Item.Goal && response.Item.Goal.S) {
+        todoData.goal = response.Item.Goal.S;
+      } else {
+        todoData.goal = null;
+      }
       return res.json(todoData);
     } else {
       return res.status(404).json({ detail: "할 일을 찾을 수 없습니다." });
@@ -819,19 +836,17 @@ app.get("/todo/read/:event_id", requireLogin, async (req, res) => {
   }
 });
 
-// 17) 할 일 수정
+// 17) 할 일 수정 (goal 업데이트 또는 삭제 포함)
 app.put("/todo/update/:event_id", requireLogin, async (req, res) => {
   const user = req.user;
   const event_id = req.params.event_id;
-  const { title, goal, location, content, isCompleted } = req.body; // 클라이언트에서 isComplete 값을 받음
+  const { title, location, content, isCompleted, goal } = req.body;
+
   // 업데이트할 필드 목록 초기화
   const updateFields = [];
   // 필드가 주어진 경우에만 해당 필드를 업데이트 목록에 추가
   if (title) {
     updateFields.push('#title = :title');
-  }
-  if (goal) {
-    updateFields.push('#goal = :goal');
   }
   if (location) {
     updateFields.push('#location = :location');
@@ -839,64 +854,82 @@ app.put("/todo/update/:event_id", requireLogin, async (req, res) => {
   if (content) {
     updateFields.push('#content = :content');
   }
-  if (isCompleted !== undefined) { // isComplete 값이 주어진 경우에만 업데이트 목록에 추가
-    updateFields.push('#isCompleted = :isCompleted'); // 수정된 부분: #isCompleted를 사용하도록 변경
+  if (isCompleted !== undefined) {
+    updateFields.push('#isCompleted = :isCompleted');
   }
-  // 업데이트할 필드가 없으면 에러 메시지 반환
-  if (updateFields.length === 0) {
-    return res.status(400).json({ detail: "수정할 필드를 지정하세요." });
+
+  // goal 업데이트를 처리
+  let updateExpression = 'SET ' + updateFields.join(', ');
+
+  // goal 값이 주어진 경우에만 업데이트
+  if (goal !== undefined) {
+    updateFields.push('#goal = :goal');
+    updateExpression = 'SET ' + updateFields.join(', ');
   }
-  // UpdateExpression 생성
-  const updateExpression = 'SET ' + updateFields.join(', ');
-  // 이전 데이터를 가져오는 부분
-  const getPreviousDataParams = {
+
+  // 업데이트할 필드 및 값 정의
+  const updateParams = {
     TableName: 'Event',
     Key: {
       'EventId': { S: event_id }
+    },
+    UpdateExpression: updateExpression,
+    ExpressionAttributeNames: {
+      '#title': 'Title',
+      '#location': 'Location',
+      '#content': 'Content',
+      '#isCompleted': 'isCompleted',
+      '#goal': 'Goal'
+    },
+    ExpressionAttributeValues: {
+      ':title': { S: title || "" },
+      ':location': { S: location || "" },
+      ':content': { S: content || "" },
+      ':isCompleted': { BOOL: isCompleted !== undefined ? isCompleted : false },
+      ':goal': goal !== undefined ? { S: goal } : { NULL: true } // goal이 주어진 경우 값 설정, 그렇지 않은 경우 NULL 설정
     }
   };
+
   try {
+    // 이전 데이터를 가져오는 부분은 그대로 유지
+    const getPreviousDataParams = {
+      TableName: 'Event',
+      Key: {
+        'EventId': { S: event_id }
+      }
+    };
     const getPreviousDataCommand = new GetItemCommand(getPreviousDataParams);
     const getPreviousDataResponse = await dynamodbClient.send(getPreviousDataCommand);
     if (!getPreviousDataResponse.Item) {
       return res.status(404).json({ detail: "할 일을 찾을 수 없음" });
     }
     const existingItem = getPreviousDataResponse.Item;
-    const updateParams = {
-      TableName: 'Event',
-      Key: {
-        'EventId': { S: event_id }
-      },
-      // 업데이트할 필드 및 값 정의
-      UpdateExpression: updateExpression,
-      // 필드 이름(Key 값)
-      ExpressionAttributeNames: {
-        '#title': 'Title',
-        '#goal': 'Goal',
-        '#location': 'Location',
-        '#content': 'Content',
-        '#isCompleted': 'isCompleted' // 수정된 부분: #isCompleted를 사용하도록 변경
-      },
-      ExpressionAttributeValues: {
-        ':title': { S: title },
-        ':goal': { S: goal },
-        ':location': { S: location },
-        ':content': { S: content },
-        ':isCompleted': { BOOL: isCompleted !== undefined ? isCompleted : false } // 클라이언트에서 받은 값 또는 기본값
+
+    // goal의 event_id가 있는 경우 목표 정보 가져오기
+    let selectedGoal = null;
+    if (goal !== undefined && goal !== null && goal !== "") {
+      selectedGoal = await getGoalById(goal);
+      if (!selectedGoal) {
+        return res.status(400).json({ detail: '지정된 목표를 찾을 수 없습니다.' });
       }
-    };
+    }
+
+    // UpdateItemCommand로 업데이트 실행
     const updateItemCommand = new UpdateItemCommand(updateParams);
     const response = await dynamodbClient.send(updateItemCommand);
+
+    // 업데이트된 데이터를 반환
     const updatedEventData = {
       event_id,
       user_id: user.user_id,
       eventType: existingItem.EventType.S,
       title,
-      goal,
       location,
       content,
       isCompleted,
+      goal
     };
+
     if (response) {
       return res.status(200).json({
         message: "할 일이 성공적으로 업데이트되었습니다.",
@@ -961,6 +994,102 @@ app.get("/todo/complete/:event_id", requireLogin, async (req, res) => {
   }
 });
 
+//20) 날짜별로 Group
+app.get("/event/groupByDate", requireLogin, async (req, res) => {
+  const user = req.user;
+  const eventType = 'Event';
+  const params = {
+    TableName: 'Event',
+    FilterExpression: 'UserId = :userId AND EventType = :eventType',
+    ExpressionAttributeValues: {
+      ':userId': { S: user.user_id },
+      ':eventType': { S: eventType },
+    }
+  };
 
+  try {
+    const command = new ScanCommand(params);
+    const response = await dynamodbClient.send(command);
+    const events = response.Items.map(item => ({
+      event_id: item.EventId.S,
+      user_id: item.UserId.S,
+      eventType: item.EventType.S,
+      title: item.Title.S,
+      startDatetime: item.StartDatetime.S,
+      endDatetime: item.EndDatetime.S,
+      goal: item.Goal.S,
+      location: item.Location.S,
+      content: item.Content.S
+    }));
+
+    // 그룹화된 일정을 저장할 객체 생성
+    const groupedEvents = {};
+
+    // 이벤트를 날짜별로 그룹화
+    events.forEach(event => {
+      const startDate = event.startDatetime.substring(0, 10); // 날짜 부분만 추출 (YYYY-MM-DD)
+      if (!groupedEvents[startDate]) {
+        groupedEvents[startDate] = [];
+      }
+      groupedEvents[startDate].push({
+        title: event.title,
+        startDatetime: event.startDatetime,
+        endDatetime: event.endDatetime,
+      });
+    });
+
+    // 결과를 클라이언트에 반환
+    return res.status(200).json(groupedEvents);
+  } catch (error) {
+    console.error('오류가 발생했습니다: ', error);
+    return res.status(500).json({ detail: "내부 서버 오류" });
+  }
+});
+
+// 21) 목표 있는것, 없는 것 Group
+app.get("/todo/groupByGoal", requireLogin, async (req, res) => {
+  const user = req.user;
+  const eventType = 'Todo';
+  const params = {
+    TableName: 'Event',
+    FilterExpression: 'UserId = :userId and EventType = :eventType',
+    ExpressionAttributeValues: {
+      ':userId': { S: user.user_id },
+      ':eventType': { S: eventType },
+    }
+  };
+  try {
+    const command = new ScanCommand(params);
+    const response = await dynamodbClient.send(command);
+    const todos = response.Items.map(item => ({
+      event_id: item.EventId.S,
+      user_id: item.UserId.S,
+      eventType: item.EventType.S,
+      title: item.Title.S,
+      goal: item.Goal ? item.Goal.S : null,
+      location: item.Location.S,
+      content: item.Content.S,
+      isCompleted: item.isCompleted ? item.isCompleted.BOOL : false
+    }));
+
+    // 할 일을 목표 유무에 따라 그룹화
+    const groupedTodos = {
+      withGoal: [],
+      withoutGoal: []
+    };
+    todos.forEach(todo => {
+      if (todo.goal) {
+        groupedTodos.withGoal.push(todo);
+      } else {
+        groupedTodos.withoutGoal.push(todo);
+      }
+    });
+
+    return res.status(200).json(groupedTodos);
+  } catch (error) {
+    console.error('오류가 발생했습니다:', error);
+    return res.status(500).json({ detail: '내부 서버 오류' });
+  }
+});
 
 module.exports = app; // Express 애플리케이션을 내보내는 부분
