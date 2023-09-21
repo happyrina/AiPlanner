@@ -594,6 +594,8 @@ async function getGoalById(goalId) {
   }
 }
 // 11) 일정 수정
+// 12) 일정 수정 (일부 필드만 업데이트)
+// 12) Update an event
 app.put("/event/update/:event_id", requireLogin, async (req, res) => {
   const user = req.user;
   const event_id = req.params.event_id;
