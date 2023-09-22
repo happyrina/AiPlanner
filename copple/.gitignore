@@ -1,13 +1,4 @@
-#node
 node/node_modules
-node/package*
-
-oauth/node_modules
-oauth/package*
-
-semantic-kernel/.env
-semantic-kernel/.venv
+node/pacakage*
 
 secret.json
-
-/copple/AiPlanner/copple/node/node_modules
