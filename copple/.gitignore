@@ -1,7 +1,0 @@
-secret.json
-.env
-
-node/node_modules
-node/pacakage*
-
-python/.env
