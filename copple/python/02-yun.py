@@ -36,10 +36,9 @@ table = dynamodb.Table(table_name)
 class UserRequest(BaseModel):
     user_id: str
 
-
 # Create a route to summarize events for a user
-@app.post("/summarize_events/")
-async def summarize_events(user_request: UserRequest):
+@app.post("/summarize_plan")
+async def summarize_plan(user_request: UserRequest):
     user_id = user_request.user_id
     try:
         # Retrieve data from DynamoDB for the specified user_id
@@ -53,7 +52,7 @@ async def summarize_events(user_request: UserRequest):
         event_texts = [item.get("Content", "") for item in items]
 
         # Concatenate event texts into a single document
-        all_event_text = "\n".join(event_texts)
+        all_event_text = "당신의 모든 일정입니다.".join(event_texts)
 
         # Use Semantic Kernel to summarize the events
         prompt = f"""Summarize the events for UserId: {user_id} with the following content:

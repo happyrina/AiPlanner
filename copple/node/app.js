@@ -15,9 +15,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const account = require('./routes/account.js');
 const event = require('./routes/event.js');
+const chat = require('./routes/chat.js');
 
 app.use(account); // account.js 모듈 호출
 app.use(event); // event.js 모듈 호출
+app.use(chat)
 
 // const swaggerUi = require('swagger-ui-express');
 // const swaggerFile = require('./swagger-output.json')
