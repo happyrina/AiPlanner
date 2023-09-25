@@ -3,3 +3,6 @@ copple/node/node_modules
 copple/node/package*
 copple/node/routes/node_modules
 copple/node/routes/package*
+
+python/.env
+.env
