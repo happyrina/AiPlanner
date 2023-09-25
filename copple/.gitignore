@@ -1,4 +1,7 @@
+secret.json
+.env
+
 node/node_modules
 node/pacakage*
 
-secret.json
+python/.env
