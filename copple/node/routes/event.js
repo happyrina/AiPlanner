@@ -241,7 +241,7 @@ app.get("/goal/read/:event_id", requireLogin, async (req, res) => {
 });
 
 // 4) 목표 수정
-app.put("/goal/update/:event_id", requireLogin, upload.single("image"), async (req, res) => {
+app.post("/goal/update/:event_id", requireLogin, upload.single("image"), async (req, res) => {
   const user = req.user; // 사용자 정보 가져오기
   const event_id = req.params.event_id; // 업데이트할 목표의 event_id 가져오기
   const { title, startDatetime, endDatetime, location, content, isCompleted } = req.body; // 요청에서 데이터 추출
@@ -676,7 +676,6 @@ app.put("/event/update/:event_id", requireLogin, async (req, res) => {
     return res.status(500).json({ detail: "Unable to update the event." });
   }
 });
-
 
 
 
@@ -1130,5 +1129,148 @@ app.get("/todo/groupByGoal", requireLogin, async (req, res) => {
     return res.status(500).json({ detail: '내부 서버 오류' });
   }
 });
+
+app.get("/event/groupByGoal", requireLogin, async (req, res) => {
+  const user = req.user;
+  const eventType = 'Event';
+  const params = {
+    TableName: 'Event',
+    FilterExpression: 'UserId = :userId AND EventType = :eventType',
+    ExpressionAttributeValues: {
+      ':userId': { S: user.user_id },
+      ':eventType': { S: eventType },
+    }
+  };
+
+  try {
+    const command = new ScanCommand(params);
+    const response = await dynamodbClient.send(command);
+    const events = response.Items.map(item => ({
+      event_id: item.EventId ? item.EventId.S : null,
+      user_id: item.UserId ? item.UserId.S : null,
+      eventType: item.EventType ? item.EventType.S : null,
+      title: item.Title ? item.Title.S : null,
+      startDatetime: item.StartDatetime ? item.StartDatetime.S : null,
+      endDatetime: item.EndDatetime ? item.EndDatetime.S : null,
+      goal: item.Goal ? item.Goal.S : null,
+      location: item.Location ? item.Location.S : null,
+      content: item.Content ? item.Content.S : null
+    }));
+
+    // "goal" 속성을 기준으로 이벤트 그룹화
+    const groupedEvents = {};
+    events.forEach(event => {
+      const goal = event.goal || 'No Goal'; // "goal"이 없는 경우 "No Goal"로 그룹화
+      if (!groupedEvents[goal]) {
+        groupedEvents[goal] = [];
+      }
+      groupedEvents[goal].push(event);
+    });
+
+    return res.status(200).json(groupedEvents);
+  } catch (error) {
+    console.error('오류가 발생했습니다: ', error);
+    return res.status(500).json({ detail: "내부 서버 오류" });
+  }
+});
+
+
+app.get("/event/groupByGoal/:goalEventId", requireLogin, async (req, res) => {
+  const user = req.user;
+  const eventType = 'Event';
+  const goalEventId = req.params.goalEventId; // Get the goal's event_id from the URL parameter
+  
+  const params = {
+    TableName: 'Event',
+    FilterExpression: 'UserId = :userId AND EventType = :eventType AND Goal = :goalEventId', // Filter events by the specified goal's event_id
+    ExpressionAttributeValues: {
+      ':userId': { S: user.user_id },
+      ':eventType': { S: eventType },
+      ':goalEventId': { S: goalEventId }, // Set the goal's event_id
+    }
+  };
+
+  try {
+    const command = new ScanCommand(params);
+    const response = await dynamodbClient.send(command);
+    
+    if (!response.Items) {
+      return res.status(200).json({}); // Return an empty object if there are no events
+    }
+
+    const events = response.Items.map(item => ({
+      event_id: item.EventId ? item.EventId.S : null,
+      user_id: item.UserId ? item.UserId.S : null,
+      eventType: item.EventType ? item.EventType.S : null,
+      title: item.Title ? item.Title.S : null,
+      startDatetime: item.StartDatetime ? item.StartDatetime.S : null,
+      endDatetime: item.EndDatetime ? item.EndDatetime.S : null,
+      goal: item.Goal ? item.Goal.S : null,
+      location: item.Location ? item.Location.S : null,
+      content: item.Content ? item.Content.S : null
+    }));
+
+    // Create an object to store grouped events
+    const groupedEvents = {};
+
+    // Group events by date
+    events.forEach(event => {
+      const startDate = event.startDatetime ? event.startDatetime.substring(0, 10) : null; // Extract only the date part (YYYY-MM-DD)
+      if (!startDate) {
+        return; // Skip if there's no valid date
+      }
+      if (!groupedEvents[startDate]) {
+        groupedEvents[startDate] = [];
+      }
+      groupedEvents[startDate].push({
+        title: event.title,
+        startDatetime: event.startDatetime,
+        endDatetime: event.endDatetime,
+      });
+    });
+
+    // Return the grouped events to the client
+    return res.status(200).json(groupedEvents);
+  } catch (error) {
+    console.error('An error occurred: ', error);
+    return res.status(500).json({ detail: "Internal Server Error" });
+  }
+});
+
+app.get("/todo/groupByGoal/:goalEventId", requireLogin, async (req, res) => {
+  const user = req.user;
+  const eventType = 'Todo';
+  const goalEventId = req.params.goalEventId; // Get the goal's event_id from the URL parameter
+  const params = {
+    TableName: 'Event',
+    FilterExpression: 'UserId = :userId AND EventType = :eventType AND Goal = :goalEventId', // Filter todos by the specified goal's event_id
+    ExpressionAttributeValues: {
+      ':userId': { S: user.user_id },
+      ':eventType': { S: eventType },
+      ':goalEventId': { S: goalEventId }, // Set the goal's event_id
+    }
+  };
+
+  try {
+    const command = new ScanCommand(params);
+    const response = await dynamodbClient.send(command);
+    const todos = response.Items.map(item => ({
+      event_id: item.EventId.S,
+      user_id: item.UserId.S,
+      eventType: item.EventType.S,
+      title: item.Title.S,
+      goal: item.Goal ? item.Goal.S : null,
+      location: item.Location.S,
+      content: item.Content.S,
+      isCompleted: item.isCompleted ? item.isCompleted.BOOL : false
+    }));
+
+    return res.status(200).json(todos);
+  } catch (error) {
+    console.error('An error occurred:', error);
+    return res.status(500).json({ detail: 'Internal Server Error' });
+  }
+});
+
 
 module.exports = app; // Express 애플리케이션을 내보내는 부분
