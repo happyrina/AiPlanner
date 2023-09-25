@@ -240,6 +240,108 @@ app.get("/goal/read/:event_id", requireLogin, async (req, res) => {
   }
 });
 
+
+app.put("/goal/update/:event_id", requireLogin, upload.single("image"), async (req, res) => {
+  const user = req.user; // 사용자 정보 가져오기
+  const event_id = req.params.event_id; // 업데이트할 목표의 event_id 가져오기
+  const { title, startDatetime, endDatetime, location, content, isCompleted } = req.body; // 요청에서 데이터 추출
+  try {
+    let imageUrl = null;
+    // 새로운 이미지가 업로드되었는지 확인
+    if (req.file) {
+      const fileBuffer = req.file.buffer; // 업로드된 파일 버퍼 가져오기
+      const fileType = req.file.mimetype; // 파일 유형 가져오기
+      const userId = user.user_id;
+      const key = `travel_photos/${uuidv4()}.jpg`; // 이미지를 저장할 S3 버킷 키 생성
+      // S3에 이미지 업로드
+      const params = {
+        Bucket: 'seo-3169', // S3 버킷 이름
+        Key: key, // 이미지를 저장할 키
+        Body: fileBuffer, // 이미지 파일 버퍼
+        ContentType: fileType, // 이미지 파일 유형
+      };
+      await s3Client.send(new PutObjectCommand(params)); // 이미지를 S3에 업로드
+      // 업로드된 이미지의 URL 생성
+      imageUrl = `https://${params.Bucket}.s3.ap-northeast-2.amazonaws.com/${params.Key}`;
+    }
+    // DynamoDB에서 해당 event_id를 가진 목표 정보를 조회
+    const getItemParams = {
+      TableName: 'Event', // DynamoDB 테이블 이름
+      Key: {
+        'EventId': { S: event_id }, // 조회할 목표의 event_id
+      },
+    };
+    const getItemCommand = new GetItemCommand(getItemParams);
+    const getItemResponse = await dynamodbClient.send(getItemCommand);
+
+    if (!getItemResponse.Item) {
+      // 해당 event_id를 가진 목표가 없으면 404 응답 반환
+      return res.status(404).json({ detail: '해당 목표를 찾을 수 없습니다.' });
+    }
+    const existingItem = getItemResponse.Item;
+    // 기존 이미지 URL이 있고, 새 이미지가 업로드되었으면 이전 이미지 삭제
+    if (existingItem.PhotoURL && imageUrl) {
+      await deleteImage(existingItem.PhotoURL.S);
+    }
+    // 나머지 데이터와 함께 DynamoDB를 업데이트
+    const updateParams = {
+      TableName: 'Event',
+      Key: {
+        'EventId': { S: event_id }, // 업데이트할 목표의 event_id
+      },
+      UpdateExpression: 'SET #title=:title, #startDatetime=:startDatetime, #endDatetime=:endDatetime, #location=:location, #content=:content, #isCompleted=:isCompleted',
+      ExpressionAttributeNames: {
+        '#title': 'Title',
+        '#startDatetime': 'StartDatetime',
+        '#endDatetime': 'EndDatetime',
+        '#location': 'Location',
+        '#content': 'Content',
+        '#photoURL': 'PhotoURL',
+        '#isCompleted': 'isCompleted',
+      },
+      ExpressionAttributeValues: {
+        ':title': { S: title },
+        ':startDatetime': { S: startDatetime },
+        ':endDatetime': { S: endDatetime },
+        ':location': { S: location },
+        ':content': { S: content },
+        ':isCompleted': { BOOL: isCompleted !== undefined ? isCompleted : false }, // isCompleted 값을 DynamoDB BOOL 형식으로 설정
+      }
+    };
+    if (imageUrl) {
+      updateParams.UpdateExpression += ', #photoURL = :photoURL';
+      updateParams.ExpressionAttributeValues[':photoURL'] = { S: imageUrl };
+    } else {
+      // 이미지가 없는 경우 PhotoURL 속성을 삭제
+      updateParams.UpdateExpression += ' REMOVE #photoURL';
+    }
+    // DynamoDB 업데이트 수행
+    await dynamodbClient.send(new UpdateItemCommand(updateParams));
+    // 수정된 목표 정보 생성
+    const updatedGoal = {
+      event_id,
+      user_id: user.user_id,
+      eventType: existingItem.EventType.S,
+      title,
+      startDatetime,
+      endDatetime,
+      location,
+      content,
+      photoUrl: imageUrl || null,
+      isCompleted, // 수정된 값 사용
+    };
+    // 성공적인 응답 반환
+    return res.status(200).json({
+      message: "목표가 성공적으로 수정 되었습니다.",
+      updatedGoal
+    });
+  } catch (error) {
+    console.error('An error occurred while updating the goal:', error);
+    return res.status(500).json({ detail: "목표를 수정하는 중 오류가 발생했습니다." });
+  }
+});
+
+
 // 4) 목표 수정
 app.post("/goal/update/:event_id", requireLogin, upload.single("image"), async (req, res) => {
   const user = req.user; // 사용자 정보 가져오기
