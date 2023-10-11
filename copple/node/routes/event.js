@@ -1,7 +1,7 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
-const { S3Client, PutObjectCommand, DeleteObjectCommand, RestoreObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand, RestoreObjectCommand, InventoryFormat } = require('@aws-sdk/client-s3');
 const { DynamoDBClient, PutItemCommand, ScanCommand, GetItemCommand, UpdateItemCommand, DeleteItemCommand, BatchGetItemCommand } = require('@aws-sdk/client-dynamodb');
 const cookieParser = require('cookie-parser');
 const path = require('path');
@@ -162,7 +162,7 @@ app.get("/goal/read", requireLogin, async (req, res) => {
     const response = await dynamodbClient.send(command);
     // 업데이트된 값을 가져오기 위해 업데이트된 event_id 목록을 생성
     const updatedEventIds = response.Items.map(item => item.EventId.S);
-    
+
     // 업데이트된 데이터를 가져오기 위해 BatchGetItem을 사용
     if (updatedEventIds.length === 0) {
       return res.status(200).json({ detail: "목표가 없습니다." });
@@ -274,7 +274,7 @@ app.put("/goal/update", requireLogin, upload.single("image"), async (req, res) =
     };
     const getItemCommand = new GetItemCommand(getItemParams);
     const getItemResponse = await dynamodbClient.send(getItemCommand);
-console.log(getItemResponse)
+    console.log(getItemResponse)
     if (!getItemResponse.Item) {
       // 해당 event_id를 가진 목표가 없으면 404 응답 반환
       return res.status(404).json({ detail: '해당 목표를 찾을 수 없습니다.' });
@@ -312,11 +312,11 @@ console.log(getItemResponse)
     if (imageUrl) {
       updateParams.UpdateExpression += ', #photoURL = :photoURL';
       updateParams.ExpressionAttributeValues[':photoURL'] = { S: imageUrl };
-    } 
+    }
     else if (photoUrl) {
       updateParams.UpdateExpression += ', #photoURL = :photoURL';
       updateParams.ExpressionAttributeValues[':photoURL'] = { S: photoUrl };
-    }else {
+    } else {
       // 이미지가 없는 경우 PhotoURL 속성을 삭제
       updateParams.UpdateExpression += ' REMOVE #photoURL'
       imageUrl === null;
@@ -352,7 +352,7 @@ console.log(getItemResponse)
 app.post("/goal/update/:event_id", requireLogin, upload.single("image"), async (req, res) => {
   const user = req.user; // 사용자 정보 가져오기
   // 업데이트할 목표의 event_id 가져오기
-  const { event_id, title, startDatetime, endDatetime, location, content, isCompleted, photoUrl} = req.body; // 요청에서 데이터 추출
+  const { event_id, title, startDatetime, endDatetime, location, content, isCompleted, photoUrl } = req.body; // 요청에서 데이터 추출
   try {
     let imageUrl = null;
     // 새로운 이미지가 업로드되었는지 확인
@@ -540,19 +540,20 @@ app.get("/goal/isCompleted/:event_id", requireLogin, async (req, res) => {
 // 8) 일정 생성
 app.post("/event/create", requireLogin, async (req, res) => {
   const user = req.user;
+  console.log(req.ueser, req.body, '/event/create');
   const { title, startDatetime, endDatetime, goal, location, content } = req.body;
   const event_id = uuidv4();
   const eventType = 'Event';
   try {
     let selectedGoal = null; // 선택한 목표 정보를 초기화
 
-    if (goal !== "") { // 목표가 비어있지 않은 경우에만 목표 정보 가져오기 시도
+    if (goal !== undefined && goal !== null && goal !== "") { // 목표가 비어있지 않은 경우에만 목표 정보 가져오기 시도
       selectedGoal = await getGoalById(goal);
       if (!selectedGoal) {
         return res.status(400).json({ detail: '지정된 목표를 찾을 수 없습니다.' });
       }
     }
-    
+
     // 일정 데이터를 DynamoDB에 저장하기 위한 파라미터 설정
     const params = {
       TableName: 'Event',
@@ -567,7 +568,7 @@ app.post("/event/create", requireLogin, async (req, res) => {
         'Content': { S: content }
       },
     };
-    
+
     if (selectedGoal) {
       params.Item['Goal'] = { S: goal }; // 목표가 있을 때만 Goal 필드를 추가
     }
@@ -718,11 +719,18 @@ app.put("/event/update/:event_id", requireLogin, async (req, res) => {
 
   // Validate and update only non-empty and defined fields
   const updateFields = [];
+  const expressionAttributeNames = {};
+  const expressionAttributeValues = {};
+
   if (title !== undefined && title !== "") {
     updateFields.push('#title = :title');
+    expressionAttributeNames['#title'] = 'Title';
+    expressionAttributeValues[':title'] = { S: title };
   }
   if (startDatetime !== undefined && startDatetime !== "") {
     updateFields.push('#startDatetime = :startDatetime');
+    expressionAttributeNames['#startDatetime'] = 'StartDatetime';
+    expressionAttributeValues[':startDatetime'] = { S: startDatetime };
   }
   if (endDatetime !== undefined && endDatetime !== "") {
     updateFields.push('#endDatetime = :endDatetime');
@@ -745,22 +753,8 @@ app.put("/event/update/:event_id", requireLogin, async (req, res) => {
       'EventId': { S: event_id }
     },
     UpdateExpression: updateExpression,
-    ExpressionAttributeNames: {
-      '#title': 'Title',
-      '#startDatetime': 'StartDatetime',
-      '#endDatetime': 'EndDatetime',
-      '#goal': 'Goal',
-      '#location': 'Location',
-      '#content': 'Content',
-    },
-    ExpressionAttributeValues: {
-      ':title': { S: title || "" },
-      ':startDatetime': { S: startDatetime || "" },
-      ':endDatetime': { S: endDatetime || "" },
-      ':goal': goal !== undefined ? { S: goal } : { NULL: true }, // Set goal to null if undefined
-      ':location': { S: location || "" },
-      ':content': { S: content || "" },
-    }
+    ExpressionAttributeNames: expressionAttributeNames,
+    ExpressionAttributeValues: expressionAttributeValues
   };
 
   try {
@@ -817,26 +811,22 @@ app.delete("/event/delete/:event_id", requireLogin, async (req, res) => {
 
 // 13) 날짜에 해당하는 일정 정보 조회
 app.get("/event/readByDate/:date", requireLogin, async (req, res) => {
-  console.log("여기다!!!")
   const user = req.user;
   const date = req.params.date; // 클라이언트에서 전달된 날짜
-  console.log(date)
   // 날짜 범위를 설정합니다. 여기서는 날짜 범위를 해당 날짜의 00:00:00부터 23:59:59까지로 가정합니다.
   let currentDate = new Date(date)
-  console.log(currentDate)
-  const tomorrow = format(new Date(currentDate.setDate(currentDate.getDate() + 1)), "yyyy-MM-dd HH:mm:ss") 
+  const tomorrow = format(new Date(currentDate.setDate(currentDate.getDate() + 1)), "yyyy-MM-dd HH:mm:ss")
 
   currentDate = format(new Date(date), "yyyy-MM-dd HH:mm:ss")
-  
-  console.log("여기임?? :" , currentDate, tomorrow)
+
   const params = {
     TableName: 'Event',
     FilterExpression: 'UserId = :userId AND EventType = :eventType AND StartDatetime >= :first AND EndDatetime < :second',
     ExpressionAttributeValues: {
       ':userId': { S: user.user_id },
       ':eventType': { S: 'Event' },
-      ':first': { S: currentDate},
-      ':second': { S: tomorrow}
+      ':first': { S: currentDate },
+      ':second': { S: tomorrow }
     }
   };
   try {
@@ -852,10 +842,10 @@ app.get("/event/readByDate/:date", requireLogin, async (req, res) => {
       title: item.Title.S,
       startDatetime: item.StartDatetime.S,
       endDatetime: item.EndDatetime.S,
-      goal: item.Goal ?  item.Goal.S  : null,
+      goal: item.Goal ? item.Goal.S : null,
       location: item.Location.S ? item.Location.S : null,
       content: item.Content.S ? item.Content.S : null
-    })); 
+    }));
     return res.json(events);
   } catch (error) {
     console.error('오류가 발생했습니다: ', error);
@@ -873,7 +863,7 @@ app.post("/todo/create", requireLogin, async (req, res) => {
   try {
     let selectedGoal = null; // 선택한 목표 정보를 초기화
 
-    if (goal !== "") { // 목표가 비어있지 않은 경우에만 목표 정보 가져오기 시도
+    if (goal !== undefined && goal !== null && goal !== "") { // 목표가 비어있지 않은 경우에만 목표 정보 가져오기 시도
       selectedGoal = await getGoalById(goal);
       if (!selectedGoal) {
         return res.status(400).json({ detail: '지정된 목표를 찾을 수 없습니다.' });
@@ -955,14 +945,15 @@ app.get("/todo/read", requireLogin, async (req, res) => {
     };
     const batchGetCommand = new BatchGetItemCommand(batchGetParams);
     const batchGetResponse = await dynamodbClient.send(batchGetCommand);
+    console.log(batchGetResponse, '948')
     const todos = batchGetResponse.Responses['Event'].map(item => ({
       event_id: item.EventId.S,
       user_id: item.UserId.S,
       eventType: item.EventType.S,
       title: item.Title.S,
       goal: item.Goal ? item.Goal.S : null,
-      location: item.Location.S,
-      content: item.Content.S,
+      location: item.Location ? item.Location : null,
+      content: item.Content ? item.Content : null,
       isCompleted: item.isCompleted ? item.isCompleted.BOOL : false // 완료 상태를 응답에 추가
     }));
     return res.status(200).json(todos);
@@ -1159,7 +1150,7 @@ app.get("/event/groupByDate", requireLogin, async (req, res) => {
   try {
     const command = new ScanCommand(params);
     const response = await dynamodbClient.send(command);
-    
+
     if (!response.Items) {
       return res.status(200).json({}); // 이벤트가 없는 경우 빈 객체 반환
     }
@@ -1300,7 +1291,7 @@ app.get("/event/groupByGoal/:goalEventId", requireLogin, async (req, res) => {
   const user = req.user;
   const eventType = 'Event';
   const goalEventId = req.params.goalEventId; // Get the goal's event_id from the URL parameter
-  
+
   const params = {
     TableName: 'Event',
     FilterExpression: 'UserId = :userId AND EventType = :eventType AND Goal = :goalEventId', // Filter events by the specified goal's event_id
@@ -1314,7 +1305,7 @@ app.get("/event/groupByGoal/:goalEventId", requireLogin, async (req, res) => {
   try {
     const command = new ScanCommand(params);
     const response = await dynamodbClient.send(command);
-    
+    console.log(response, "groupbygoal")
     if (!response.Items) {
       return res.status(200).json({}); // Return an empty object if there are no events
     }

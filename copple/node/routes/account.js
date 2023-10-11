@@ -124,8 +124,9 @@ app.post("/account/logout", requireLogin, (req, res) => {
 
 // 사용자 회원가입 처리
 app.post("/account/signup", async (req, res) => {
+  console.log(req);
   const { user_id, user_name, password, passwordcheck } = req.body;
-
+  console.log(user_id, user_name, password, passwordcheck)
   if (await isUserExists(user_id)) {
     return res.status(400).json({ detail: "이미 존재하는 사용자 ID입니다." });
   }
@@ -150,6 +151,7 @@ app.post("/account/signup", async (req, res) => {
       'UUID': { S: user_uuid },
     },
   };
+  console.log(params)
 
   try {
     const command = new PutItemCommand(params);

@@ -6,7 +6,7 @@ const cookieParser = require('cookie-parser');
 
 const app = express();
 
-app.set('port', process.env.PORT || 3001);
+app.set('port', process.env.PORT || 3000);
 app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -28,5 +28,5 @@ app.use(chat);
 // app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, { explorer: true }));
 
 app.listen(app.get('port'), () => {
-  console.log('3001 Port : Server Started...');
+  console.log('3000 Port : Server Started...');
 });
