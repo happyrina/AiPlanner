@@ -11,17 +11,19 @@ app = FastAPI()
 
 # CORS 설정
 origins = [
-    "http://0.0.0.0",  # 허용하려는 도메인을 추가합니다.
-    "http://43.202.77.171:3000",  # React 애플리케이션의 주소
+    "http://localhost:3000",  # Add the URL of your React application
+    "http://43.202.77.171:3000",  # Address of the React application
 ]
+
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # 모든 HTTP 메서드 허용 (설정에 따라 조정 가능)
-    allow_headers=["*"],  # 모든 헤더 허용 (설정에 따라 조정 가능)
+    allow_methods=["*"],  # You can adjust this based on your needs
+    allow_headers=["*"],  # You can adjust this based on your needs
 )
+
 
 # Load environment variables from .env file
 load_dotenv()

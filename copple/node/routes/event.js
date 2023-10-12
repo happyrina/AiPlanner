@@ -2,7 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const { S3Client, PutObjectCommand, DeleteObjectCommand, RestoreObjectCommand, InventoryFormat } = require('@aws-sdk/client-s3');
-const { DynamoDBClient, PutItemCommand, ScanCommand, GetItemCommand, UpdateItemCommand, DeleteItemCommand, BatchGetItemCommand } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBClient, QueryCommand, PutItemCommand, ScanCommand, GetItemCommand, UpdateItemCommand, DeleteItemCommand, BatchGetItemCommand } = require('@aws-sdk/client-dynamodb');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const cors = require('cors');
@@ -917,9 +917,73 @@ app.post("/todo/create", requireLogin, async (req, res) => {
 });
 
 // 15) 할 일 전체 조회
+// app.get("/todo/read", requireLogin, async (req, res) => {
+//   const user = req.user;
+//   const eventType = 'Todo';
+//   const params = {
+//     TableName: 'Event',
+//     FilterExpression: 'UserId = :userId and EventType = :eventType',
+//     ExpressionAttributeValues: {
+//       ':userId': { S: user.user_id },
+//       ':eventType': { S: eventType },
+//     }
+//   };
+//   console.log(`params:${params}`)
+//   try {
+//     const command = new ScanCommand(params); // AWS SDK 버전 3의 새로운 방식으로 명령(Command)을 생성합니다.
+//     const response = await dynamodbClient.send(command); // 명령을 실행하고 응답을 받습니다.
+//     // 업데이트된 값을 가져오기 위해 업데이트된 event_id 목록을 생성
+//     const updatedEventIds = response.Items.length > 1 ? response.Items.map(item => item.EventId.S) : response.Items.EventId ? response.Items.EventId.S : null
+//     if (updatedEventIds === null) return res.status(200).json({ message: 'no todo exists' });
+//     else {
+//       // 업데이트된 데이터를 가져오기 위해 BatchGetItem을 사용
+//       const batchGetParams = {
+//         RequestItems: {
+//           'Event': {
+//             Keys: updatedEventIds.map(event_id => ({
+//               'EventId': { S: event_id }
+//             }))
+//           }
+//         }
+//       };
+//       console.log(`batchGetParams:${batchGetParams}`)
+//       const batchGetCommand = new BatchGetItemCommand(batchGetParams);
+//       console.log(batchGetCommand, 'batchGetCommand')
+//       const batchGetResponse = await dynamodbClient.send(batchGetCommand);
+//       console.log(batchGetResponse, '950')
+//       const todos = batchGetResponse.Responses['Event'].length > 1 ? batchGetResponse.Responses['Event'].map(item => ({
+//         event_id: item.EventId.S,
+//         user_id: item.UserId.S,
+//         eventType: item.EventType.S,
+//         title: item.Title.S,
+//         goal: item.Goal ? item.Goal.S : null,
+//         location: item.Location ? item.Location : null,
+//         content: item.Content ? item.Content : null,
+//         isCompleted: item.isCompleted ? item.isCompleted.BOOL : false // 완료 상태를 응답에 추가
+//       })) : {
+//         event_id: item.EventId.S,
+//         user_id: item.UserId.S,
+//         eventType: item.EventType.S,
+//         title: item.Title.S,
+//         goal: item.Goal ? item.Goal.S : null,
+//         location: item.Location ? item.Location : null,
+//         content: item.Content ? item.Content : null,
+//         isCompleted: item.isCompleted ? item.isCompleted.BOOL : false // 완료 상태를 응답에 추가
+//       };
+//       console.log(`todos:${todos}`)
+//       return res.status(200).json(todos);
+//     }
+//   } catch (error) {
+//     console.error('오류가 발생했습니다:', error);
+//     return res.status(500).json({ detail: '내부 서버 오류' });
+//   }
+// });
+
 app.get("/todo/read", requireLogin, async (req, res) => {
   const user = req.user;
   const eventType = 'Todo';
+
+  // Use Query instead of Scan for efficiency
   const params = {
     TableName: 'Event',
     FilterExpression: 'UserId = :userId and EventType = :eventType',
@@ -931,37 +995,23 @@ app.get("/todo/read", requireLogin, async (req, res) => {
   try {
     const command = new ScanCommand(params); // AWS SDK 버전 3의 새로운 방식으로 명령(Command)을 생성합니다.
     const response = await dynamodbClient.send(command); // 명령을 실행하고 응답을 받습니다.
-    // 업데이트된 값을 가져오기 위해 업데이트된 event_id 목록을 생성
-    const updatedEventIds = response.Items.map(item => item.EventId.S);
-    // 업데이트된 데이터를 가져오기 위해 BatchGetItem을 사용
-    const batchGetParams = {
-      RequestItems: {
-        'Event': {
-          Keys: updatedEventIds.map(event_id => ({
-            'EventId': { S: event_id }
-          }))
-        }
-      }
-    };
-    const batchGetCommand = new BatchGetItemCommand(batchGetParams);
-    const batchGetResponse = await dynamodbClient.send(batchGetCommand);
-    console.log(batchGetResponse, '948')
-    const todos = batchGetResponse.Responses['Event'].map(item => ({
-      event_id: item.EventId.S,
-      user_id: item.UserId.S,
-      eventType: item.EventType.S,
-      title: item.Title.S,
+    const events = response.Items.map(item => ({
+      event_id: item.EventId ? item.EventId.S : null,
+      user_id: item.UserId ? item.UserId.S : null,
+      eventType: item.EventType ? item.EventType.S : null,
+      title: item.Title ? item.Title.S : null,
+      startDatetime: item.StartDatetime ? item.StartDatetime.S : null,
+      endDatetime: item.EndDatetime ? item.EndDatetime.S : null,
       goal: item.Goal ? item.Goal.S : null,
-      location: item.Location ? item.Location : null,
-      content: item.Content ? item.Content : null,
-      isCompleted: item.isCompleted ? item.isCompleted.BOOL : false // 완료 상태를 응답에 추가
+      location: item.Location ? item.Location.S : null,
+      content: item.Content ? item.Content.S : null
     }));
-    return res.status(200).json(todos);
+    return res.status(200).json(events);
   } catch (error) {
-    console.error('오류가 발생했습니다:', error);
-    return res.status(500).json({ detail: '내부 서버 오류' });
+    console.error('오류가 발생했습니다: ', error);
+    return res.status(500).json({ detail: "내부 서버 오류" });
   }
-});
+})
 
 // 16)할 일 하나만 조회
 app.get("/todo/read/:event_id", requireLogin, async (req, res) => {
